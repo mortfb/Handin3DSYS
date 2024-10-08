@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+option go_package = "handin3/grpc/proto";
+
+service ChittyChatService{
+    rpc publishMessage(publishRequest) returns (publishResponse){};
+    
+    rpc broadcastAll(broadcastAllRequest) returns (broadcastAllresponse){};
+
+    rpc newClientJoined(newClientJoinedRequest) returns (newClientJoinedResponse){};
+    
+    rpc clientLeave(clientLeaveRequest) returns (clientLeaveResponse){};
+}
+
+message publishRequest{
+    string message = 1;
+    int32 timeStamp = 2;
+}
+
+message publishResponse{
+    bool success = 1; //bool to mark the success
+    string message = 2; //message marking succes or failure
+}
+
+message broadcastAllRequest{};
+
+message broadcastAllresponse{
+    repeated string message = 1;
+    repeated int32 timeStamp = 2;
+}
+
+
+message newClientJoinedRequest{
+    string name = 1;
+    int32 timeStamp = 2;
+}
+
+message newClientJoinedResponse{
+    string message = 1;
+    int32 timeStamp = 2;
+}
+
+message clientLeaveRequest{
+    string name = 1;
+    int32 timeStamp = 2;
+}
+
+message clientLeaveResponse{
+    string message = 1;
+    int32 timeStamp = 2;
+}

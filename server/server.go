@@ -15,7 +15,7 @@ type ChittyChatServiceServer struct {
 
 func main() {
 	server := &ChittyChatServiceServer{users: []string{}}
-
+	//This starts the server
 	server.start_server()
 
 }

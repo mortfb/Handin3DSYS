@@ -19,7 +19,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ChittyChatServiceClient interface {
 	PublishMessage(ctx context.Context, in *PublishRequest, opts ...grpc.CallOption) (*PublishResponse, error)
-	BroadcastAll(ctx context.Context, in *BroadcastAllRequest, opts ...grpc.CallOption) (*BroadcastAllresponse, error)
+	BroadcastAll(ctx context.Context, in *BroadcastAllRequest, opts ...grpc.CallOption) (ChittyChatService_BroadcastAllClient, error)
 	NewClientJoined(ctx context.Context, in *NewClientJoinedRequest, opts ...grpc.CallOption) (*NewClientJoinedResponse, error)
 	ClientLeave(ctx context.Context, in *ClientLeaveRequest, opts ...grpc.CallOption) (*ClientLeaveResponse, error)
 }
@@ -41,13 +41,36 @@ func (c *chittyChatServiceClient) PublishMessage(ctx context.Context, in *Publis
 	return out, nil
 }
 
-func (c *chittyChatServiceClient) BroadcastAll(ctx context.Context, in *BroadcastAllRequest, opts ...grpc.CallOption) (*BroadcastAllresponse, error) {
-	out := new(BroadcastAllresponse)
-	err := c.cc.Invoke(ctx, "/ChittyChatService/broadcastAll", in, out, opts...)
+func (c *chittyChatServiceClient) BroadcastAll(ctx context.Context, in *BroadcastAllRequest, opts ...grpc.CallOption) (ChittyChatService_BroadcastAllClient, error) {
+	stream, err := c.cc.NewStream(ctx, &ChittyChatService_ServiceDesc.Streams[0], "/ChittyChatService/broadcastAll", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &chittyChatServiceBroadcastAllClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type ChittyChatService_BroadcastAllClient interface {
+	Recv() (*BroadcastAllresponse, error)
+	grpc.ClientStream
+}
+
+type chittyChatServiceBroadcastAllClient struct {
+	grpc.ClientStream
+}
+
+func (x *chittyChatServiceBroadcastAllClient) Recv() (*BroadcastAllresponse, error) {
+	m := new(BroadcastAllresponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 func (c *chittyChatServiceClient) NewClientJoined(ctx context.Context, in *NewClientJoinedRequest, opts ...grpc.CallOption) (*NewClientJoinedResponse, error) {
@@ -73,7 +96,7 @@ func (c *chittyChatServiceClient) ClientLeave(ctx context.Context, in *ClientLea
 // for forward compatibility
 type ChittyChatServiceServer interface {
 	PublishMessage(context.Context, *PublishRequest) (*PublishResponse, error)
-	BroadcastAll(context.Context, *BroadcastAllRequest) (*BroadcastAllresponse, error)
+	BroadcastAll(*BroadcastAllRequest, ChittyChatService_BroadcastAllServer) error
 	NewClientJoined(context.Context, *NewClientJoinedRequest) (*NewClientJoinedResponse, error)
 	ClientLeave(context.Context, *ClientLeaveRequest) (*ClientLeaveResponse, error)
 	mustEmbedUnimplementedChittyChatServiceServer()
@@ -86,8 +109,8 @@ type UnimplementedChittyChatServiceServer struct {
 func (UnimplementedChittyChatServiceServer) PublishMessage(context.Context, *PublishRequest) (*PublishResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PublishMessage not implemented")
 }
-func (UnimplementedChittyChatServiceServer) BroadcastAll(context.Context, *BroadcastAllRequest) (*BroadcastAllresponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method BroadcastAll not implemented")
+func (UnimplementedChittyChatServiceServer) BroadcastAll(*BroadcastAllRequest, ChittyChatService_BroadcastAllServer) error {
+	return status.Errorf(codes.Unimplemented, "method BroadcastAll not implemented")
 }
 func (UnimplementedChittyChatServiceServer) NewClientJoined(context.Context, *NewClientJoinedRequest) (*NewClientJoinedResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method NewClientJoined not implemented")
@@ -126,22 +149,25 @@ func _ChittyChatService_PublishMessage_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ChittyChatService_BroadcastAll_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BroadcastAllRequest)
-	if err := dec(in); err != nil {
-		return nil, err
+func _ChittyChatService_BroadcastAll_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(BroadcastAllRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
 	}
-	if interceptor == nil {
-		return srv.(ChittyChatServiceServer).BroadcastAll(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ChittyChatService/broadcastAll",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChittyChatServiceServer).BroadcastAll(ctx, req.(*BroadcastAllRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+	return srv.(ChittyChatServiceServer).BroadcastAll(m, &chittyChatServiceBroadcastAllServer{stream})
+}
+
+type ChittyChatService_BroadcastAllServer interface {
+	Send(*BroadcastAllresponse) error
+	grpc.ServerStream
+}
+
+type chittyChatServiceBroadcastAllServer struct {
+	grpc.ServerStream
+}
+
+func (x *chittyChatServiceBroadcastAllServer) Send(m *BroadcastAllresponse) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 func _ChittyChatService_NewClientJoined_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -192,10 +218,6 @@ var ChittyChatService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ChittyChatService_PublishMessage_Handler,
 		},
 		{
-			MethodName: "broadcastAll",
-			Handler:    _ChittyChatService_BroadcastAll_Handler,
-		},
-		{
 			MethodName: "newClientJoined",
 			Handler:    _ChittyChatService_NewClientJoined_Handler,
 		},
@@ -204,6 +226,12 @@ var ChittyChatService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ChittyChatService_ClientLeave_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "broadcastAll",
+			Handler:       _ChittyChatService_BroadcastAll_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "grpc/proto.proto",
 }

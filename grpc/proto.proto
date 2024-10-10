@@ -2,56 +2,56 @@ syntax = "proto3";
 
 option go_package = "handin3/grpc/proto";
 
-
-service ChittyChatService{
-    rpc publishMessage(publishRequest) returns (publishResponse){};
+service ChittyChatService {
+    rpc PublishMessage(PostMessage) returns (PostResponse) {};
     
-    rpc broadcastAll(broadcastAllRequest) returns (stream broadcastAllresponse){};
+    rpc BroadcastAllMessages(BroadcastAllRequest) returns (BroadcastAllResponse) {};//may need to be a stream
 
-    rpc newClientJoined(newClientJoinedRequest) returns (newClientJoinedResponse){};
+    rpc NewClientJoined(NewClientJoinedRequest) returns (NewClientJoinedResponse) {};
     
-    rpc clientLeave(clientLeaveRequest) returns (clientLeaveResponse){};
+    rpc ClientLeave(ClientLeaveRequest) returns (ClientLeaveResponse) {};
 
+    //Not thought out yet(WIP)
+    rpc BroadcastJoin(empty) returns (stream NewClientJoinedResponse) {};
+
+    rpc BroadcastLeave(empty) returns (stream ClientLeaveResponse) {};
 }
 
-message publishRequest{
+message PostMessage {
     string user = 1;
-    string message = 2; 
+    string message = 2;
     int32 timeStamp = 3;
 }
 
-message publishResponse{
-    bool success = 1; //bool to mark the success
-    string message = 2; //message marking succes or failure
+message PostResponse {
+    bool success = 1;
+    string message = 2;
 }
 
-message broadcastAllRequest{};
+message BroadcastAllRequest {};
 
-message broadcastAllresponse{
-    repeated string user = 1;
-    repeated string message = 2;
-    repeated int32 timeStamp = 3;
+message BroadcastAllResponse {
+    repeated PostMessage messages = 1; //returns a collection of PostMessage instead of individual strings and ints
 }
 
-
-message newClientJoinedRequest{
+message NewClientJoinedRequest {
     string name = 1;
     int32 timeStamp = 2;
 }
 
-message newClientJoinedResponse{
+message NewClientJoinedResponse {
     string name = 1;
     int32 timeStamp = 2;
 }
 
-message clientLeaveRequest{
+message ClientLeaveRequest {
     string name = 1;
     int32 timeStamp = 2;
 }
 
-message clientLeaveResponse{
+message ClientLeaveResponse {
     string name = 1;
     int32 timeStamp = 2;
 }
 
-
+message empty{};

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	proto "handin3/grpc"
 	"log"
 	"net"
@@ -13,19 +14,20 @@ import (
 
 type ChittyChatServiceServer struct {
 	proto.UnimplementedChittyChatServiceServer
-	messages    []proto.PublishRequest //maybe not needed
+	messages    []proto.PostMessage //maybe not needed
 	lambortTime int
 }
 
 func main() {
-	server := &ChittyChatServiceServer{messages: []proto.PublishRequest{}, lambortTime: 0}
-
-	//This is just to test the append
-	server.messages = append(server.messages, proto.PublishRequest{
-		User:      "test",
-		Message:   "test",
-		TimeStamp: 0,
-	})
+	server := &ChittyChatServiceServer{messages: []proto.PostMessage{}, lambortTime: 0}
+	/*
+		//This is just to test the append
+		server.messages = append(server.messages, proto.PublishRequest{
+			User:      "test",
+			Message:   "test",
+			TimeStamp: 0,
+		})
+	*/
 
 	//This starts the server
 	server.start_server()
@@ -56,24 +58,27 @@ func (s *ChittyChatServiceServer) run_server() {
 
 }
 
-func (s *ChittyChatServiceServer) PublishMessage(ctx context.Context, req *proto.PublishRequest) (*proto.PublishResponse, error) {
+func (s *ChittyChatServiceServer) PublishMessage(ctx context.Context, req *proto.PostMessage) (*proto.PostResponse, error) {
 	s.lambortTime += 1
 
 	s.lambortTime = s.compareLT(int(req.TimeStamp))
 	req.TimeStamp = int32(s.lambortTime)
 
 	if !utf8.ValidString(req.Message) {
-		return &proto.PublishResponse{
+		s.lambortTime += 1
+		return &proto.PostResponse{
 			Success: false,
 			Message: "Messages must be valid in utf8",
 		}, nil
 	} else if len(req.Message) > 128 {
-		return &proto.PublishResponse{
+		s.lambortTime += 1
+		return &proto.PostResponse{
 			Success: false,
 			Message: "Messages cant be more than 128 characters long",
 		}, nil
 	} else if len(req.Message) <= 0 {
-		return &proto.PublishResponse{
+		s.lambortTime += 1
+		return &proto.PostResponse{
 			Success: false,
 			Message: "Messages must be longer than 0 characters",
 		}, nil
@@ -83,12 +88,15 @@ func (s *ChittyChatServiceServer) PublishMessage(ctx context.Context, req *proto
 	s.messages = append(s.messages, *req)
 
 	log.Printf("Message: %s", req.Message)
+	log.Printf("cool")
+	fmt.Println("cool")
 
 	for i := range s.messages {
 		log.Printf("Message: %s", s.messages[i].Message)
 	}
 
-	return &proto.PublishResponse{
+	s.lambortTime += 1
+	return &proto.PostResponse{
 		Success: true,
 		Message: "Message published successfully",
 	}, nil
@@ -99,6 +107,7 @@ func (s *ChittyChatServiceServer) NewClientJoined(ctx context.Context, req *prot
 
 	s.lambortTime = s.compareLT(int(req.TimeStamp))
 
+	s.lambortTime += 1
 	return &proto.NewClientJoinedResponse{
 		Name:      req.Name + " joined successfully at Lamport time " + strconv.Itoa(s.lambortTime),
 		TimeStamp: int32(s.lambortTime),
@@ -110,6 +119,8 @@ func (s *ChittyChatServiceServer) ClientLeave(ctx context.Context, req *proto.Cl
 
 	s.lambortTime = s.compareLT(int(req.TimeStamp))
 
+	//Receives and sends, therefore s.lambortTime X 2
+	s.lambortTime += 1
 	return &proto.ClientLeaveResponse{
 		Name:      req.Name + " left at Lamport time " + strconv.Itoa(s.lambortTime), //req.Message is the name of the client
 		TimeStamp: int32(s.lambortTime),
@@ -130,6 +141,7 @@ func (s *ChittyChatServiceServer) compareLT(otherLT int) int {
 
 /*
 func (s *ChittyChatServiceServer) BroadcastAll(in *proto.BroadcastAllRequest, stream proto.ChittyChatService_BroadcastAllServer) (*proto.BroadcastAllresponse, error) {
+	s.lambortTime += 1
 	return nil
 }
 

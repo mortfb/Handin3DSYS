@@ -26,6 +26,7 @@ message PostMessage {
 message PostResponse {
     bool success = 1;
     string message = 2;
+    int32 timeStamp = 3;
 }
 
 message BroadcastAllRequest {
@@ -35,6 +36,7 @@ message BroadcastAllRequest {
 
 message BroadcastAllResponse {
     PostMessage messages = 1; //returns a collection of PostMessage instead of individual strings and ints
+    int32 timeStamp = 2;
 }
 
 message NewClientJoinedRequest {

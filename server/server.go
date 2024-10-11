@@ -94,7 +94,7 @@ func (s *ChittyChatServiceServer) PublishMessage(ctx context.Context, req *proto
 	log.Printf("Message: %s", req.Message)
 
 	for i := range s.messages {
-		log.Printf("Message: %s", s.messages[i].User.Name, " ", s.messages[i].Message)
+		log.Printf("Message: %s %s", s.messages[i].User.Name, s.messages[i].Message)
 	}
 
 	s.lambortTime += 1

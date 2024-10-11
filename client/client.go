@@ -65,6 +65,9 @@ func main() {
 		TimeStamp: int32(lamportTime),
 	})
 
+	lamportTime = compareLT(lamportTime, int(work.TimeStamp))
+	lamportTime += 1
+
 	fmt.Println(work.Message, " ", work.TimeStamp)
 
 	lamportTime += 1
@@ -76,6 +79,23 @@ func main() {
 
 	fmt.Println(pls.Success, " ", pls.Message, " ")
 
+	lamportTime = compareLT(lamportTime, int(pls.TimeStamp))
+	lamportTime += 1
+
+	fmt.Println("Client Lamport Time ", lamportTime)
+
+	lamportTime += 1
+	var pls2, _ = client.PublishMessage(context.Background(), &proto.PostMessage{
+		User:      &user,
+		Message:   "HEJ ALLESAMMEN MIT NAVN ER LUKAS OG JEG ER EN Dasdadasasasasasasasasasasasasasasasasasasasasasasasasasasasdadasdwrfqwgqqgqqqwsadsadwawqfqqweqweqwsdadwadafdqwfwqqfqfqfqfafsafwasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasas",
+		TimeStamp: int32(lamportTime),
+	})
+
+	fmt.Println(pls2.Success, " ", pls2.Message, " ")
+
+	lamportTime = compareLT(lamportTime, int(pls2.TimeStamp))
+	lamportTime += 1
+
 	fmt.Println("Client Lamport Time ", lamportTime)
 
 	lamportTime += 1
@@ -85,6 +105,9 @@ func main() {
 	})
 
 	fmt.Println(gooo.Message, " ", gooo.TimeStamp)
+
+	lamportTime = compareLT(lamportTime, int(gooo.TimeStamp))
+	lamportTime += 1
 
 	fmt.Println("Client Lamport Time ", lamportTime)
 
@@ -99,6 +122,7 @@ func main() {
 	}
 
 	//Setting up client reading stream
+	lamportTime += 1
 	for {
 		select {
 		case <-stop.C:
@@ -119,11 +143,18 @@ func main() {
 		}
 
 	}
+	lamportTime = compareLT(lamportTime, int(pls.TimeStamp))
+	lamportTime += 1
+}
 
-	for {
-		message, _ := stream.Recv()
+func compareLT(thisLT int, otherLT int) int {
+	var result int
 
-		fmt.Println(message.Messages.User.Name, " ", message.Messages.Message)
+	if thisLT > otherLT {
+		result = thisLT
+	} else {
+		result = otherLT
 	}
 
+	return result
 }

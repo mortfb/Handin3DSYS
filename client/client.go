@@ -5,6 +5,7 @@ import (
 	"fmt"
 	proto "handin3/grpc"
 	"log"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -53,16 +54,22 @@ func main() {
 	//var Log    []proto.PublishRequest
 
 	lamportTime += 1
+
+	user := proto.User{
+		Name:   "Lukas",
+		UserID: 1,
+	}
+
 	var work, _ = client.NewClientJoined(context.Background(), &proto.NewClientJoinedRequest{
-		Name:      "Lukas",
+		User:      &user,
 		TimeStamp: int32(lamportTime),
 	})
 
-	fmt.Println(work.Name, " ", work.TimeStamp)
+	fmt.Println(work.Message, " ", work.TimeStamp)
 
 	lamportTime += 1
 	var pls, _ = client.PublishMessage(context.Background(), &proto.PostMessage{
-		User:      "Lukas",
+		User:      &user,
 		Message:   "WOOOOP",
 		TimeStamp: int32(lamportTime),
 	})
@@ -73,12 +80,50 @@ func main() {
 
 	lamportTime += 1
 	var gooo, _ = client.ClientLeave(context.Background(), &proto.ClientLeaveRequest{
-		Name:      "Lukas",
+		User:      &user,
 		TimeStamp: int32(lamportTime),
 	})
 
-	fmt.Println(gooo.Name, " ", gooo.TimeStamp)
+	fmt.Println(gooo.Message, " ", gooo.TimeStamp)
 
 	fmt.Println("Client Lamport Time ", lamportTime)
+
+	//Stream starts here
+	var stream, erro = client.BroadcastAllMessages(context.Background(), &proto.BroadcastAllRequest{})
+
+	//Creating a timer, to guarantee that the stream gets cancelled
+	stop := time.NewTicker(7 * time.Second)
+
+	if erro != nil {
+		log.Fatalf("Not working")
+	}
+
+	//Setting up client reading stream
+	for {
+		select {
+		case <-stop.C:
+			err := stream.CloseSend()
+			if err != nil {
+				log.Fatalf("Failed to close stream: %v", err)
+			}
+			return
+
+		default:
+			message, err := stream.Recv()
+			if err != nil {
+				log.Fatalf("Failed to receive a message : %v", err)
+			}
+			//Should be added to the log
+			fmt.Println(message.Messages.User.Name, ", ", message.Messages.Message, ", ", message.Messages.TimeStamp)
+
+		}
+
+	}
+
+	for {
+		message, _ := stream.Recv()
+
+		fmt.Println(message.Messages.User.Name, " ", message.Messages.Message)
+	}
 
 }

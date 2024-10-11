@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
-	"fmt"
 	proto "handin3/grpc"
 	"log"
 	"net"
 	"strconv"
+	"sync"
+	"time"
 	"unicode/utf8"
 
 	"google.golang.org/grpc"
@@ -14,8 +15,11 @@ import (
 
 type ChittyChatServiceServer struct {
 	proto.UnimplementedChittyChatServiceServer
-	messages    []proto.PostMessage //maybe not needed
+	messages []proto.PostMessage //maybe not needed
+
 	lambortTime int
+
+	muLock sync.Mutex
 }
 
 func main() {
@@ -88,11 +92,9 @@ func (s *ChittyChatServiceServer) PublishMessage(ctx context.Context, req *proto
 	s.messages = append(s.messages, *req)
 
 	log.Printf("Message: %s", req.Message)
-	log.Printf("cool")
-	fmt.Println("cool")
 
 	for i := range s.messages {
-		log.Printf("Message: %s", s.messages[i].Message)
+		log.Printf("Message: %s", s.messages[i].User.Name, " ", s.messages[i].Message)
 	}
 
 	s.lambortTime += 1
@@ -109,7 +111,7 @@ func (s *ChittyChatServiceServer) NewClientJoined(ctx context.Context, req *prot
 
 	s.lambortTime += 1
 	return &proto.NewClientJoinedResponse{
-		Name:      req.Name + " joined successfully at Lamport time " + strconv.Itoa(s.lambortTime),
+		Message:   req.User.Name + " joined successfully at Lamport time " + strconv.Itoa(s.lambortTime),
 		TimeStamp: int32(s.lambortTime),
 	}, nil
 }
@@ -122,7 +124,7 @@ func (s *ChittyChatServiceServer) ClientLeave(ctx context.Context, req *proto.Cl
 	//Receives and sends, therefore s.lambortTime X 2
 	s.lambortTime += 1
 	return &proto.ClientLeaveResponse{
-		Name:      req.Name + " left at Lamport time " + strconv.Itoa(s.lambortTime), //req.Message is the name of the client
+		Message:   req.User.Name + " left at Lamport time " + strconv.Itoa(s.lambortTime), //req.Message is the name of the client
 		TimeStamp: int32(s.lambortTime),
 	}, nil
 }
@@ -139,10 +141,28 @@ func (s *ChittyChatServiceServer) compareLT(otherLT int) int {
 	return result
 }
 
-/*
-func (s *ChittyChatServiceServer) BroadcastAll(in *proto.BroadcastAllRequest, stream proto.ChittyChatService_BroadcastAllServer) (*proto.BroadcastAllresponse, error) {
+func (s *ChittyChatServiceServer) BroadcastAllMessages(req *proto.BroadcastAllRequest, stream proto.ChittyChatService_BroadcastAllMessagesServer) error {
 	s.lambortTime += 1
-	return nil
-}
 
-*/
+	s.lambortTime = s.compareLT(int(req.TimeStamp))
+	//sets up a timer, that executes every 3 seconds
+	timer := time.NewTicker(3 * time.Second)
+
+	for {
+		select {
+		case <-stream.Context().Done():
+			return nil
+
+		case <-timer.C:
+			for _, message := range s.messages {
+				err := stream.Send(&proto.BroadcastAllResponse{
+					Messages: &message,
+				})
+				if err != nil {
+					log.Println(err.Error())
+					return err
+				}
+			}
+		}
+	}
+}

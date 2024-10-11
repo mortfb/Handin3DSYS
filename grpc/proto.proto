@@ -5,7 +5,7 @@ option go_package = "handin3/grpc/proto";
 service ChittyChatService {
     rpc PublishMessage(PostMessage) returns (PostResponse) {};
     
-    rpc BroadcastAllMessages(BroadcastAllRequest) returns (BroadcastAllResponse) {};//may need to be a stream
+    rpc BroadcastAllMessages(BroadcastAllRequest) returns (stream BroadcastAllResponse) {};//may need to be a stream
 
     rpc NewClientJoined(NewClientJoinedRequest) returns (NewClientJoinedResponse) {};
     
@@ -18,7 +18,7 @@ service ChittyChatService {
 }
 
 message PostMessage {
-    string user = 1;
+    User user = 1;
     string message = 2;
     int32 timeStamp = 3;
 }
@@ -28,30 +28,38 @@ message PostResponse {
     string message = 2;
 }
 
-message BroadcastAllRequest {};
+message BroadcastAllRequest {
+    User user = 1;
+    int32 timeStamp = 2;
+};
 
 message BroadcastAllResponse {
-    repeated PostMessage messages = 1; //returns a collection of PostMessage instead of individual strings and ints
+    PostMessage messages = 1; //returns a collection of PostMessage instead of individual strings and ints
 }
 
 message NewClientJoinedRequest {
-    string name = 1;
+    User user = 1;
     int32 timeStamp = 2;
 }
 
 message NewClientJoinedResponse {
-    string name = 1;
+    string message = 1;
     int32 timeStamp = 2;
 }
 
 message ClientLeaveRequest {
-    string name = 1;
+    User user = 1;
     int32 timeStamp = 2;
 }
 
 message ClientLeaveResponse {
-    string name = 1;
+    string message = 1;
     int32 timeStamp = 2;
 }
 
 message empty{};
+
+message User{
+    string name = 1;
+    int32 userID = 2;
+}   

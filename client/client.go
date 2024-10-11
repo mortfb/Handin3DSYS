@@ -91,8 +91,8 @@ func main() {
 	//Stream starts here
 	var stream, erro = client.BroadcastAllMessages(context.Background(), &proto.BroadcastAllRequest{})
 
-	//Creating a timer, to guarantee that the stream gets cancelled
-	stop := time.NewTicker(7 * time.Second)
+	//Creating a timer, to run the stream every 5 seconds
+	stop := time.NewTicker(5 * time.Second)
 
 	if erro != nil {
 		log.Fatalf("Not working")

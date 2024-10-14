@@ -138,23 +138,39 @@ func main() {
 			running = false
 
 		default:
-			message, err := stream.Recv()
+			getMessage, err := stream.Recv()
 			if err != nil {
 				log.Fatalf("Failed to receive a message : %v", err)
 			}
 			//Should be added to the log
-			fmt.Println(message.Messages.User.Name, ", ", message.Messages.Message, ", ", message.Messages.TimeStamp)
-			theLog = append(theLog, proto.PostMessage{
-				User:      message.Messages.User,
-				Message:   message.Messages.Message,
-				TimeStamp: int32(lamportTime),
-			})
+			fmt.Println(getMessage.Messages.User.Name, ", ", getMessage.Messages.Message, ", ", getMessage.Messages.TimeStamp)
+
+			//Checking if the message this should work
+			var messageInLog = false
+
+			for _, message := range theLog {
+				if message.User.Name == getMessage.Messages.User.Name && message.Message == getMessage.Messages.Message && message.TimeStamp == getMessage.Messages.TimeStamp {
+					messageInLog = true
+					break
+				}
+			}
+
+			if !messageInLog {
+				{
+					theLog = append(theLog, proto.PostMessage{
+						User:      getMessage.Messages.User,
+						Message:   getMessage.Messages.Message,
+						TimeStamp: int32(lamportTime),
+					})
+				}
+
+			}
+
 		}
 
+		lamportTime = compareLT(lamportTime, int(pls.TimeStamp))
+		lamportTime += 1
 	}
-
-	lamportTime = compareLT(lamportTime, int(pls.TimeStamp))
-	lamportTime += 1
 }
 
 func compareLT(thisLT int, otherLT int) int {

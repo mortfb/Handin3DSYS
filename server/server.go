@@ -22,6 +22,8 @@ type ChittyChatServiceServer struct {
 	muLock sync.Mutex
 }
 
+var totalAmuntUsers int = 0
+
 func main() {
 	server := &ChittyChatServiceServer{messages: []proto.PostMessage{}, lambortTime: 0}
 	/*
@@ -88,7 +90,15 @@ func (s *ChittyChatServiceServer) PublishMessage(ctx context.Context, req *proto
 		}, nil
 	}
 
-	//If it is valid
+	//If it is valid create a new message and changes the users id
+	if totalAmuntUsers == 0 {
+		totalAmuntUsers += 1
+		req.User.UserID = 0
+	} else {
+		req.User.UserID = int32(totalAmuntUsers)
+		totalAmuntUsers += 1
+	}
+
 	s.messages = append(s.messages, *req)
 
 	log.Printf("Message: %s", req.Message)

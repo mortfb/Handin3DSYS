@@ -36,6 +36,8 @@ import (
 //6) done/doing (this can be done, but not like the assignments wants)
 //7) done/doing (this can be done, but not like the assignments wants)
 
+var theLog = []proto.PostMessage{}
+
 func main() {
 	var lamportTime int = 0
 
@@ -123,14 +125,17 @@ func main() {
 
 	//Setting up client reading stream
 	lamportTime += 1
-	for {
+
+	running := true
+
+	for running {
 		select {
 		case <-stop.C:
 			err := stream.CloseSend()
 			if err != nil {
 				log.Fatalf("Failed to close stream: %v", err)
 			}
-			return
+			running = false
 
 		default:
 			message, err := stream.Recv()
@@ -139,10 +144,15 @@ func main() {
 			}
 			//Should be added to the log
 			fmt.Println(message.Messages.User.Name, ", ", message.Messages.Message, ", ", message.Messages.TimeStamp)
-
+			theLog = append(theLog, proto.PostMessage{
+				User:      message.Messages.User,
+				Message:   message.Messages.Message,
+				TimeStamp: int32(lamportTime),
+			})
 		}
 
 	}
+
 	lamportTime = compareLT(lamportTime, int(pls.TimeStamp))
 	lamportTime += 1
 }

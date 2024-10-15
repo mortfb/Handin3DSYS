@@ -20,11 +20,8 @@ const _ = grpc.SupportPackageIsVersion7
 type ChittyChatServiceClient interface {
 	PublishMessage(ctx context.Context, in *PostMessage, opts ...grpc.CallOption) (*PostResponse, error)
 	BroadcastAllMessages(ctx context.Context, in *BroadcastAllRequest, opts ...grpc.CallOption) (ChittyChatService_BroadcastAllMessagesClient, error)
-	NewClientJoined(ctx context.Context, in *NewClientJoinedRequest, opts ...grpc.CallOption) (*NewClientJoinedResponse, error)
-	ClientLeave(ctx context.Context, in *ClientLeaveRequest, opts ...grpc.CallOption) (*ClientLeaveResponse, error)
-	//Not thought out yet(WIP)
-	BroadcastJoin(ctx context.Context, in *Empty, opts ...grpc.CallOption) (ChittyChatService_BroadcastJoinClient, error)
-	BroadcastLeave(ctx context.Context, in *Empty, opts ...grpc.CallOption) (ChittyChatService_BroadcastLeaveClient, error)
+	NewClientJoined(ctx context.Context, in *NewClientJoinedRequest, opts ...grpc.CallOption) (ChittyChatService_NewClientJoinedClient, error)
+	ClientLeave(ctx context.Context, in *ClientLeaveRequest, opts ...grpc.CallOption) (ChittyChatService_ClientLeaveClient, error)
 }
 
 type chittyChatServiceClient struct {
@@ -76,30 +73,12 @@ func (x *chittyChatServiceBroadcastAllMessagesClient) Recv() (*BroadcastAllRespo
 	return m, nil
 }
 
-func (c *chittyChatServiceClient) NewClientJoined(ctx context.Context, in *NewClientJoinedRequest, opts ...grpc.CallOption) (*NewClientJoinedResponse, error) {
-	out := new(NewClientJoinedResponse)
-	err := c.cc.Invoke(ctx, "/ChittyChatService/NewClientJoined", in, out, opts...)
+func (c *chittyChatServiceClient) NewClientJoined(ctx context.Context, in *NewClientJoinedRequest, opts ...grpc.CallOption) (ChittyChatService_NewClientJoinedClient, error) {
+	stream, err := c.cc.NewStream(ctx, &ChittyChatService_ServiceDesc.Streams[1], "/ChittyChatService/NewClientJoined", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
-}
-
-func (c *chittyChatServiceClient) ClientLeave(ctx context.Context, in *ClientLeaveRequest, opts ...grpc.CallOption) (*ClientLeaveResponse, error) {
-	out := new(ClientLeaveResponse)
-	err := c.cc.Invoke(ctx, "/ChittyChatService/ClientLeave", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *chittyChatServiceClient) BroadcastJoin(ctx context.Context, in *Empty, opts ...grpc.CallOption) (ChittyChatService_BroadcastJoinClient, error) {
-	stream, err := c.cc.NewStream(ctx, &ChittyChatService_ServiceDesc.Streams[1], "/ChittyChatService/BroadcastJoin", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &chittyChatServiceBroadcastJoinClient{stream}
+	x := &chittyChatServiceNewClientJoinedClient{stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -109,16 +88,16 @@ func (c *chittyChatServiceClient) BroadcastJoin(ctx context.Context, in *Empty, 
 	return x, nil
 }
 
-type ChittyChatService_BroadcastJoinClient interface {
+type ChittyChatService_NewClientJoinedClient interface {
 	Recv() (*NewClientJoinedResponse, error)
 	grpc.ClientStream
 }
 
-type chittyChatServiceBroadcastJoinClient struct {
+type chittyChatServiceNewClientJoinedClient struct {
 	grpc.ClientStream
 }
 
-func (x *chittyChatServiceBroadcastJoinClient) Recv() (*NewClientJoinedResponse, error) {
+func (x *chittyChatServiceNewClientJoinedClient) Recv() (*NewClientJoinedResponse, error) {
 	m := new(NewClientJoinedResponse)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -126,12 +105,12 @@ func (x *chittyChatServiceBroadcastJoinClient) Recv() (*NewClientJoinedResponse,
 	return m, nil
 }
 
-func (c *chittyChatServiceClient) BroadcastLeave(ctx context.Context, in *Empty, opts ...grpc.CallOption) (ChittyChatService_BroadcastLeaveClient, error) {
-	stream, err := c.cc.NewStream(ctx, &ChittyChatService_ServiceDesc.Streams[2], "/ChittyChatService/BroadcastLeave", opts...)
+func (c *chittyChatServiceClient) ClientLeave(ctx context.Context, in *ClientLeaveRequest, opts ...grpc.CallOption) (ChittyChatService_ClientLeaveClient, error) {
+	stream, err := c.cc.NewStream(ctx, &ChittyChatService_ServiceDesc.Streams[2], "/ChittyChatService/ClientLeave", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &chittyChatServiceBroadcastLeaveClient{stream}
+	x := &chittyChatServiceClientLeaveClient{stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -141,16 +120,16 @@ func (c *chittyChatServiceClient) BroadcastLeave(ctx context.Context, in *Empty,
 	return x, nil
 }
 
-type ChittyChatService_BroadcastLeaveClient interface {
+type ChittyChatService_ClientLeaveClient interface {
 	Recv() (*ClientLeaveResponse, error)
 	grpc.ClientStream
 }
 
-type chittyChatServiceBroadcastLeaveClient struct {
+type chittyChatServiceClientLeaveClient struct {
 	grpc.ClientStream
 }
 
-func (x *chittyChatServiceBroadcastLeaveClient) Recv() (*ClientLeaveResponse, error) {
+func (x *chittyChatServiceClientLeaveClient) Recv() (*ClientLeaveResponse, error) {
 	m := new(ClientLeaveResponse)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -164,11 +143,8 @@ func (x *chittyChatServiceBroadcastLeaveClient) Recv() (*ClientLeaveResponse, er
 type ChittyChatServiceServer interface {
 	PublishMessage(context.Context, *PostMessage) (*PostResponse, error)
 	BroadcastAllMessages(*BroadcastAllRequest, ChittyChatService_BroadcastAllMessagesServer) error
-	NewClientJoined(context.Context, *NewClientJoinedRequest) (*NewClientJoinedResponse, error)
-	ClientLeave(context.Context, *ClientLeaveRequest) (*ClientLeaveResponse, error)
-	//Not thought out yet(WIP)
-	BroadcastJoin(*Empty, ChittyChatService_BroadcastJoinServer) error
-	BroadcastLeave(*Empty, ChittyChatService_BroadcastLeaveServer) error
+	NewClientJoined(*NewClientJoinedRequest, ChittyChatService_NewClientJoinedServer) error
+	ClientLeave(*ClientLeaveRequest, ChittyChatService_ClientLeaveServer) error
 	mustEmbedUnimplementedChittyChatServiceServer()
 }
 
@@ -182,17 +158,11 @@ func (UnimplementedChittyChatServiceServer) PublishMessage(context.Context, *Pos
 func (UnimplementedChittyChatServiceServer) BroadcastAllMessages(*BroadcastAllRequest, ChittyChatService_BroadcastAllMessagesServer) error {
 	return status.Errorf(codes.Unimplemented, "method BroadcastAllMessages not implemented")
 }
-func (UnimplementedChittyChatServiceServer) NewClientJoined(context.Context, *NewClientJoinedRequest) (*NewClientJoinedResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method NewClientJoined not implemented")
+func (UnimplementedChittyChatServiceServer) NewClientJoined(*NewClientJoinedRequest, ChittyChatService_NewClientJoinedServer) error {
+	return status.Errorf(codes.Unimplemented, "method NewClientJoined not implemented")
 }
-func (UnimplementedChittyChatServiceServer) ClientLeave(context.Context, *ClientLeaveRequest) (*ClientLeaveResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ClientLeave not implemented")
-}
-func (UnimplementedChittyChatServiceServer) BroadcastJoin(*Empty, ChittyChatService_BroadcastJoinServer) error {
-	return status.Errorf(codes.Unimplemented, "method BroadcastJoin not implemented")
-}
-func (UnimplementedChittyChatServiceServer) BroadcastLeave(*Empty, ChittyChatService_BroadcastLeaveServer) error {
-	return status.Errorf(codes.Unimplemented, "method BroadcastLeave not implemented")
+func (UnimplementedChittyChatServiceServer) ClientLeave(*ClientLeaveRequest, ChittyChatService_ClientLeaveServer) error {
+	return status.Errorf(codes.Unimplemented, "method ClientLeave not implemented")
 }
 func (UnimplementedChittyChatServiceServer) mustEmbedUnimplementedChittyChatServiceServer() {}
 
@@ -246,81 +216,45 @@ func (x *chittyChatServiceBroadcastAllMessagesServer) Send(m *BroadcastAllRespon
 	return x.ServerStream.SendMsg(m)
 }
 
-func _ChittyChatService_NewClientJoined_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(NewClientJoinedRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ChittyChatServiceServer).NewClientJoined(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ChittyChatService/NewClientJoined",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChittyChatServiceServer).NewClientJoined(ctx, req.(*NewClientJoinedRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ChittyChatService_ClientLeave_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ClientLeaveRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ChittyChatServiceServer).ClientLeave(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ChittyChatService/ClientLeave",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChittyChatServiceServer).ClientLeave(ctx, req.(*ClientLeaveRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ChittyChatService_BroadcastJoin_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(Empty)
+func _ChittyChatService_NewClientJoined_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(NewClientJoinedRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(ChittyChatServiceServer).BroadcastJoin(m, &chittyChatServiceBroadcastJoinServer{stream})
+	return srv.(ChittyChatServiceServer).NewClientJoined(m, &chittyChatServiceNewClientJoinedServer{stream})
 }
 
-type ChittyChatService_BroadcastJoinServer interface {
+type ChittyChatService_NewClientJoinedServer interface {
 	Send(*NewClientJoinedResponse) error
 	grpc.ServerStream
 }
 
-type chittyChatServiceBroadcastJoinServer struct {
+type chittyChatServiceNewClientJoinedServer struct {
 	grpc.ServerStream
 }
 
-func (x *chittyChatServiceBroadcastJoinServer) Send(m *NewClientJoinedResponse) error {
+func (x *chittyChatServiceNewClientJoinedServer) Send(m *NewClientJoinedResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _ChittyChatService_BroadcastLeave_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(Empty)
+func _ChittyChatService_ClientLeave_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(ClientLeaveRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(ChittyChatServiceServer).BroadcastLeave(m, &chittyChatServiceBroadcastLeaveServer{stream})
+	return srv.(ChittyChatServiceServer).ClientLeave(m, &chittyChatServiceClientLeaveServer{stream})
 }
 
-type ChittyChatService_BroadcastLeaveServer interface {
+type ChittyChatService_ClientLeaveServer interface {
 	Send(*ClientLeaveResponse) error
 	grpc.ServerStream
 }
 
-type chittyChatServiceBroadcastLeaveServer struct {
+type chittyChatServiceClientLeaveServer struct {
 	grpc.ServerStream
 }
 
-func (x *chittyChatServiceBroadcastLeaveServer) Send(m *ClientLeaveResponse) error {
+func (x *chittyChatServiceClientLeaveServer) Send(m *ClientLeaveResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
@@ -335,14 +269,6 @@ var ChittyChatService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "PublishMessage",
 			Handler:    _ChittyChatService_PublishMessage_Handler,
 		},
-		{
-			MethodName: "NewClientJoined",
-			Handler:    _ChittyChatService_NewClientJoined_Handler,
-		},
-		{
-			MethodName: "ClientLeave",
-			Handler:    _ChittyChatService_ClientLeave_Handler,
-		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
@@ -351,13 +277,13 @@ var ChittyChatService_ServiceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 		{
-			StreamName:    "BroadcastJoin",
-			Handler:       _ChittyChatService_BroadcastJoin_Handler,
+			StreamName:    "NewClientJoined",
+			Handler:       _ChittyChatService_NewClientJoined_Handler,
 			ServerStreams: true,
 		},
 		{
-			StreamName:    "BroadcastLeave",
-			Handler:       _ChittyChatService_BroadcastLeave_Handler,
+			StreamName:    "ClientLeave",
+			Handler:       _ChittyChatService_ClientLeave_Handler,
 			ServerStreams: true,
 		},
 	},

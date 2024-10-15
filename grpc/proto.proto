@@ -7,14 +7,14 @@ service ChittyChatService {
     
     rpc BroadcastAllMessages(BroadcastAllRequest) returns (stream BroadcastAllResponse) {};//may need to be a stream
 
-    rpc NewClientJoined(NewClientJoinedRequest) returns (NewClientJoinedResponse) {};
+    rpc NewClientJoined(NewClientJoinedRequest) returns (stream NewClientJoinedResponse) {};
     
-    rpc ClientLeave(ClientLeaveRequest) returns (ClientLeaveResponse) {};
+    rpc ClientLeave(ClientLeaveRequest) returns (stream ClientLeaveResponse) {};
 
     //Not thought out yet(WIP)
-    rpc BroadcastJoin(empty) returns (stream NewClientJoinedResponse) {};
+    //rpc BroadcastJoin(NewClientJoinedRequest) returns (stream NewClientJoinedResponse) {};
 
-    rpc BroadcastLeave(empty) returns (stream ClientLeaveResponse) {};
+    //rpc BroadcastLeave(ClientLeaveRequest) returns (stream ClientLeaveResponse) {};
 }
 
 message PostMessage {
@@ -59,7 +59,7 @@ message ClientLeaveResponse {
     int32 timeStamp = 2;
 }
 
-message empty{};
+//message empty{};
 
 message User{
     string name = 1;

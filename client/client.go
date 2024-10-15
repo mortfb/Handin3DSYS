@@ -30,7 +30,7 @@ import (
 //TECHNICAL REQUIERMENTS
 //1) done/doing
 //2) done/doing
-//3) to do
+//3) done/doing
 //4) to do (might just be to add a logPrint everytime something happens)
 //5) to do
 //6) done/doing (this can be done, but not like the assignments wants)
@@ -58,7 +58,7 @@ func main() {
 	lamportTime += 1
 
 	user := proto.User{
-		Name:   "Lukas",
+		Name:   "Morten",
 		UserID: 1,
 	}
 
@@ -75,7 +75,7 @@ func main() {
 	lamportTime += 1
 	var pls, _ = client.PublishMessage(context.Background(), &proto.PostMessage{
 		User:      &user,
-		Message:   "WOOOOP",
+		Message:   "Hej",
 		TimeStamp: int32(lamportTime),
 	})
 
@@ -170,6 +170,10 @@ func main() {
 
 		lamportTime = compareLT(lamportTime, int(pls.TimeStamp))
 		lamportTime += 1
+	}
+
+	for _, message := range theLog {
+		fmt.Println(message.User.Name, ", ", message.Message, ", ", message.TimeStamp)
 	}
 }
 

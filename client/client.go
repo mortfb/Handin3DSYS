@@ -62,15 +62,17 @@ func main() {
 		UserID: 1,
 	}
 
-	var work, _ = client.NewClientJoined(context.Background(), &proto.NewClientJoinedRequest{
+	var work, _ = client.BroadcastJoin(context.Background(), &proto.NewClientJoinedRequest{
 		User:      &user,
 		TimeStamp: int32(lamportTime),
 	})
 
-	lamportTime = compareLT(lamportTime, int(work.TimeStamp))
+	//fmt.Println(faf.Message, " ", faf.TimeStamp)
+
+	//lamportTime = compareLT(lamportTime, int(work.TimeStamp))
 	lamportTime += 1
 
-	fmt.Println(work.Message, " ", work.TimeStamp)
+	//fmt.Println(work.Message, " ", work.TimeStamp)
 
 	lamportTime += 1
 	var pls, _ = client.PublishMessage(context.Background(), &proto.PostMessage{
@@ -100,18 +102,21 @@ func main() {
 
 	fmt.Println("Client Lamport Time ", lamportTime)
 
-	lamportTime += 1
-	var gooo, _ = client.ClientLeave(context.Background(), &proto.ClientLeaveRequest{
-		User:      &user,
-		TimeStamp: int32(lamportTime),
-	})
+	//NÅR VI ER NÅET TIL AT LAVE BROADCAST LEAVE UDKOMMENTER OG ARBEJD VIDERE!!!
+	/*
+		lamportTime += 1
+		var gooo, _ = client.BroadcastLeave(context.Background(), &proto.ClientLeaveRequest{
+			User:      &user,
+			TimeStamp: int32(lamportTime),
+		})
 
-	fmt.Println(gooo.Message, " ", gooo.TimeStamp)
+		fmt.Println(gooo.Message, " ", gooo.TimeStamp)
 
-	lamportTime = compareLT(lamportTime, int(gooo.TimeStamp))
-	lamportTime += 1
+		lamportTime = compareLT(lamportTime, int(gooo.TimeStamp))
+		lamportTime += 1
 
-	fmt.Println("Client Lamport Time ", lamportTime)
+		fmt.Println("Client Lamport Time ", lamportTime)
+	*/
 
 	//Stream starts here
 	var stream, erro = client.BroadcastAllMessages(context.Background(), &proto.BroadcastAllRequest{})
@@ -165,7 +170,8 @@ func main() {
 				}
 
 			}
-
+			getJoin, _ := work.Recv()
+			fmt.Println(getJoin.Message, " ", getJoin.TimeStamp)
 		}
 
 		lamportTime = compareLT(lamportTime, int(pls.TimeStamp))

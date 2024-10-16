@@ -49,9 +49,11 @@ func (s *ChittyChatServiceServer) start_server() {
 }
 
 func (s *ChittyChatServiceServer) PublishMessage(ctx context.Context, req *proto.PostMessage) (*proto.PostResponse, error) {
+	s.muLock.Lock()
 	s.lambortTime += 1
 	s.lambortTime = s.compareLT(int(req.TimeStamp))
 	req.TimeStamp = int32(s.lambortTime)
+	s.muLock.Unlock()
 
 	if !utf8.ValidString(req.Message) {
 		s.lambortTime += 1
@@ -81,7 +83,10 @@ func (s *ChittyChatServiceServer) PublishMessage(ctx context.Context, req *proto
 		log.Printf("Message: %s %s", s.messages[i].User.Name, s.messages[i].Message)
 	}
 
+	s.muLock.Lock()
 	s.lambortTime += 1
+	s.muLock.Unlock()
+
 	return &proto.PostResponse{
 		Success: true,
 		Message: "Message published successfully",
@@ -130,9 +135,12 @@ func (s *ChittyChatServiceServer) compareLT(otherLT int) int {
 }
 
 func (s *ChittyChatServiceServer) BroadcastAllMessages(req *proto.BroadcastAllRequest, stream proto.ChittyChatService_BroadcastAllMessagesServer) error {
+	s.muLock.Lock()
 	s.lambortTime += 1
 
 	s.lambortTime = s.compareLT(int(req.TimeStamp))
+	s.muLock.Unlock()
+
 	//sets up a timer, that executes every 3 seconds
 	timer := time.NewTicker(3 * time.Second)
 
@@ -156,9 +164,10 @@ func (s *ChittyChatServiceServer) BroadcastAllMessages(req *proto.BroadcastAllRe
 }
 
 func (s *ChittyChatServiceServer) BroadcastJoin(req *proto.NewClientJoinedRequest, stream proto.ChittyChatService_BroadcastJoinServer) error {
+	s.muLock.Lock()
 	s.lambortTime += 1
-
 	s.lambortTime = s.compareLT(int(req.TimeStamp))
+	s.muLock.Unlock()
 
 	//Server updates the user ID
 	if totalAmuntUsers == 0 {
@@ -169,26 +178,16 @@ func (s *ChittyChatServiceServer) BroadcastJoin(req *proto.NewClientJoinedReques
 		totalAmuntUsers += 1
 	}
 
-	for {
-		select {
-		case <-stream.Context().Done():
-			return nil
+	if totalAmuntUsers-1 == int(req.User.UserID) {
+		err := stream.Send(&proto.NewClientJoinedResponse{
+			Message: "User " + req.User.Name + " joined at Lamport Time " + strconv.Itoa(s.lambortTime),
+		})
 
-		default:
-			if totalAmuntUsers-1 == int(req.User.UserID) {
-				err := stream.Send(&proto.NewClientJoinedResponse{
-					Message: "User " + req.User.Name + " joined at Lamport Time " + strconv.Itoa(s.lambortTime),
-				})
-
-				if err != nil {
-					log.Println(err.Error())
-					return err
-				}
-				break
-			}
+		if err != nil {
+			log.Println(err.Error())
+			return err
 		}
 	}
-
 	return nil
 }
 

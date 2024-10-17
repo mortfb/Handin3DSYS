@@ -133,14 +133,17 @@ func (s *ChittyChatServiceServer) BroadcastAllMessages(req *proto.BroadcastAllRe
 	//sets up a timer, that executes every 3 seconds
 	//timer := time.NewTicker(3 * time.Second)
 
-	for _, message := range s.messages {
-		err := stream.Send(&proto.BroadcastAllResponse{
-			Messages:  &message,
-			TimeStamp: int32(s.lambortTime),
-		})
-		if err != nil {
-			log.Println(err.Error())
-			return err
+	for _, user := range s.activeUsers {
+		for i := range s.messages {
+			message := &s.messages[i]
+			err := user.broadCastAll.Send(&proto.BroadcastAllResponse{
+				Messages:  message,
+				TimeStamp: int32(s.lambortTime),
+			})
+			if err != nil {
+				log.Println(err.Error())
+				return err
+			}
 		}
 	}
 

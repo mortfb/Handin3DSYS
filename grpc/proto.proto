@@ -35,7 +35,7 @@ message BroadcastAllRequest {
 };
 
 message BroadcastAllResponse {
-    PostMessage messages = 1; //returns a collection of PostMessage instead of individual strings and ints
+    repeated PostMessage messages = 1; //returns a collection of PostMessage instead of individual strings and ints
     int32 timeStamp = 2;
 }
 

@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 	proto "handin3/grpc"
-	"io"
 	"log"
-	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -59,12 +57,11 @@ func main() {
 	//lamportTime += 1
 
 	user := proto.User{
-		Name:   "WHUIAF",
+		Name:   "Morten",
 		UserID: 1,
 	}
 
 	lamportTime += 1
-	log.Printf(user.Name + " joins server")
 	var broadcastJoin, _ = client.BroadcastJoin(context.Background(), &proto.NewClientJoinedRequest{
 		User:      &user,
 		TimeStamp: int32(lamportTime),
@@ -72,11 +69,9 @@ func main() {
 	lamportTime += 1
 
 	lamportTime += 1
-
-	log.Printf(user.Name + " posts message")
 	var pls, _ = client.PublishMessage(context.Background(), &proto.PostMessage{
 		User:      &user,
-		Message:   "fhauf",
+		Message:   "YAAAAY",
 		TimeStamp: int32(lamportTime),
 	})
 
@@ -102,77 +97,59 @@ func main() {
 	*/
 
 	//Stream starts here
-	log.Printf(user.Name + " ask for broadcast of all messages")
 	var stream, erro = client.BroadcastAllMessages(context.Background(), &proto.BroadcastAllRequest{
 		User:      &user,
 		TimeStamp: int32(lamportTime),
 	})
 
-	//Creating a timer, to run the stream every 5 seconds
-	stop := time.NewTicker(10 * time.Second)
-
 	if erro != nil {
 		log.Fatalf("Not working")
 	}
 
+	//Creating a timer, to run the stream every 5 seconds
+	//stop := time.NewTicker(4 * time.Second)
+
 	//Setting up client reading stream
 	lamportTime += 1
+	var messageInLog bool
 
-	running := true
+	GetMessages, err := stream.Recv()
+	if err != nil {
+		log.Fatalf("Failed to receive a message: %v", err)
+	}
 
-	for running {
-		select {
-		case <-stop.C:
-			err := stream.CloseSend()
-			if err != nil {
-				log.Fatalf("Failed to close stream: %v", err)
-			}
-			running = false
+	var gofor = GetMessages.Messages
+	log.Printf("received boadcast messages")
+	messageInLog = false
 
-		default:
-			getMessage, err := stream.Recv()
-			if err != nil {
-				if err == io.EOF {
-					running = false
-					break
-				}
-				log.Fatalf("Failed to receive a message: %v", err)
-			}
-			var messageInLog = false
-
-			for i := range theLog {
-				if theLog[i].User.UserID == getMessage.Messages.User.UserID && theLog[i].Message == getMessage.Messages.Message && theLog[i].TimeStamp == getMessage.Messages.TimeStamp {
-					messageInLog = true
-					fmt.Println("not in log")
-					break
-				}
+	for i := range gofor {
+		for j := range theLog {
+			if theLog[j].User.UserID == gofor[i].User.UserID && theLog[j].Message == gofor[i].Message && theLog[j].TimeStamp == gofor[i].TimeStamp {
+				messageInLog = true
+				break
 			}
 
-			log.Printf(user.Name + " adds message to the log")
-
-			if !messageInLog {
-				theLog = append(theLog, proto.PostMessage{
-					User:      getMessage.Messages.User,
-					Message:   getMessage.Messages.Message,
-					TimeStamp: int32(lamportTime),
-				})
-			}
-
-			getJoin, err := broadcastJoin.Recv()
-			if err != nil {
-				if err == io.EOF {
-					break
-				}
-				log.Fatalf("Failed to receive join message: %v", err)
-			}
-			fmt.Println(getJoin.Message, " ", getJoin.TimeStamp)
-
-			broadcastJoin.CloseSend()
 		}
 
-		lamportTime = compareLT(lamportTime, int(pls.TimeStamp))
-		lamportTime += 1
+		if !messageInLog {
+			theLog = append(theLog, proto.PostMessage{
+				User:      gofor[i].User,
+				Message:   gofor[i].Message,
+				TimeStamp: int32(lamportTime),
+			})
+		}
 	}
+
+	stream.CloseSend()
+
+	getJoin, err := broadcastJoin.Recv()
+
+	if err != nil {
+		log.Fatalf("Failed to receive join message: %v", err)
+	}
+	fmt.Println(getJoin.Message, " ", getJoin.TimeStamp)
+
+	broadcastJoin.CloseSend()
 
 	fmt.Println("now for the log")
 	for i := range theLog {
@@ -182,7 +159,6 @@ func main() {
 
 	lamportTime += 1
 
-	log.Printf(user.Name + " leaves server")
 	var broadcastLeave, _ = client.BroadcastLeave(context.Background(), &proto.ClientLeaveRequest{
 		User:      &user,
 		TimeStamp: int32(lamportTime),

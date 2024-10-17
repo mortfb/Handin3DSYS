@@ -7,6 +7,7 @@ import (
 	"net"
 	"strconv"
 	"sync"
+	"time"
 	"unicode/utf8"
 
 	"google.golang.org/grpc"
@@ -25,8 +26,7 @@ type ChittyChatServiceServer struct {
 	activeUsers map[int32]clientStreams
 
 	lambortTime int
-
-	muLock sync.Mutex
+	muLock      sync.Mutex
 }
 
 var totalAmuntUsers int = 0
@@ -39,6 +39,7 @@ func main() {
 }
 
 func (s *ChittyChatServiceServer) start_server() {
+	log.Printf("Server started")
 	grpcServer := grpc.NewServer()
 	listener, err := net.Listen("tcp", ":5050")
 	if err != nil {
@@ -56,6 +57,7 @@ func (s *ChittyChatServiceServer) start_server() {
 }
 
 func (s *ChittyChatServiceServer) PublishMessage(ctx context.Context, req *proto.PostMessage) (*proto.PostResponse, error) {
+	log.Printf(req.User.Name + " published a message")
 	s.muLock.Lock()
 	s.lambortTime += 1
 	s.lambortTime = s.compareLT(int(req.TimeStamp))
@@ -113,6 +115,7 @@ func (s *ChittyChatServiceServer) compareLT(otherLT int) int {
 }
 
 func (s *ChittyChatServiceServer) BroadcastAllMessages(req *proto.BroadcastAllRequest, stream proto.ChittyChatService_BroadcastAllMessagesServer) error {
+	log.Printf(req.User.Name + " broadcasts all messages")
 	s.muLock.Lock()
 	check, exists := s.activeUsers[req.User.UserID]
 	if exists {
@@ -130,33 +133,21 @@ func (s *ChittyChatServiceServer) BroadcastAllMessages(req *proto.BroadcastAllRe
 	s.lambortTime = s.compareLT(int(req.TimeStamp))
 	s.muLock.Unlock()
 
-	//sets up a timer, that executes every 3 seconds
-	//timer := time.NewTicker(3 * time.Second)
+	//sets up a timer, that executes at a certain interval
+	timer := time.NewTicker(4 * time.Second)
 
-	for _, user := range s.activeUsers {
-		for i := range s.messages {
-			message := &s.messages[i]
-			err := user.broadCastAll.Send(&proto.BroadcastAllResponse{
-				Messages:  message,
-				TimeStamp: int32(s.lambortTime),
-			})
-			if err != nil {
-				log.Println(err.Error())
-				return err
-			}
-		}
-	}
+	for {
+		select {
+		case <-stream.Context().Done():
+			return nil
 
-	/*
-		for {
-			select {
-			case <-stream.Context().Done():
-				return nil
-
-			case <-timer.C:
-				for _, message := range s.messages {
-					err := stream.Send(&proto.BroadcastAllResponse{
-						Messages: &message,
+		case <-timer.C:
+			for _, user := range s.activeUsers {
+				for i := range s.messages {
+					message := &s.messages[i]
+					err := user.broadCastAll.Send(&proto.BroadcastAllResponse{
+						Messages:  message,
+						TimeStamp: int32(s.lambortTime),
 					})
 					if err != nil {
 						log.Println(err.Error())
@@ -165,11 +156,11 @@ func (s *ChittyChatServiceServer) BroadcastAllMessages(req *proto.BroadcastAllRe
 				}
 			}
 		}
-	*/
-	return nil
+	}
 }
 
 func (s *ChittyChatServiceServer) BroadcastJoin(req *proto.NewClientJoinedRequest, stream proto.ChittyChatService_BroadcastJoinServer) error {
+	log.Printf(req.User.Name + " joins the chat")
 	s.muLock.Lock()
 	check, exists := s.activeUsers[req.User.UserID]
 	if exists {
@@ -214,6 +205,7 @@ func (s *ChittyChatServiceServer) BroadcastJoin(req *proto.NewClientJoinedReques
 }
 
 func (s *ChittyChatServiceServer) BroadcastLeave(req *proto.ClientLeaveRequest, stream proto.ChittyChatService_BroadcastLeaveServer) error {
+	log.Printf(req.User.Name + " leaves")
 	s.muLock.Lock()
 	check, exists := s.activeUsers[req.User.UserID]
 	if exists {

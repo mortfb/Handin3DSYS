@@ -6,7 +6,6 @@ import (
 	proto "handin3/grpc"
 	"io"
 	"log"
-	"math/rand"
 	"time"
 
 	"google.golang.org/grpc"
@@ -60,24 +59,24 @@ func main() {
 	//lamportTime += 1
 
 	user := proto.User{
-		Name:   "Nugget",
+		Name:   "WHUIAF",
 		UserID: 1,
 	}
 
 	lamportTime += 1
+	log.Printf(user.Name + " joins server")
 	var broadcastJoin, _ = client.BroadcastJoin(context.Background(), &proto.NewClientJoinedRequest{
 		User:      &user,
 		TimeStamp: int32(lamportTime),
 	})
 	lamportTime += 1
 
-	var random = rand.Intn(7) + 1
-	time.Sleep(time.Duration(random) * time.Second)
-
 	lamportTime += 1
+
+	log.Printf(user.Name + " posts message")
 	var pls, _ = client.PublishMessage(context.Background(), &proto.PostMessage{
 		User:      &user,
-		Message:   "yahoo",
+		Message:   "fhauf",
 		TimeStamp: int32(lamportTime),
 	})
 
@@ -103,13 +102,14 @@ func main() {
 	*/
 
 	//Stream starts here
+	log.Printf(user.Name + " ask for broadcast of all messages")
 	var stream, erro = client.BroadcastAllMessages(context.Background(), &proto.BroadcastAllRequest{
 		User:      &user,
 		TimeStamp: int32(lamportTime),
 	})
 
 	//Creating a timer, to run the stream every 5 seconds
-	stop := time.NewTicker(4 * time.Second)
+	stop := time.NewTicker(10 * time.Second)
 
 	if erro != nil {
 		log.Fatalf("Not working")
@@ -143,9 +143,12 @@ func main() {
 			for i := range theLog {
 				if theLog[i].User.UserID == getMessage.Messages.User.UserID && theLog[i].Message == getMessage.Messages.Message && theLog[i].TimeStamp == getMessage.Messages.TimeStamp {
 					messageInLog = true
+					fmt.Println("not in log")
 					break
 				}
 			}
+
+			log.Printf(user.Name + " adds message to the log")
 
 			if !messageInLog {
 				theLog = append(theLog, proto.PostMessage{
@@ -179,6 +182,7 @@ func main() {
 
 	lamportTime += 1
 
+	log.Printf(user.Name + " leaves server")
 	var broadcastLeave, _ = client.BroadcastLeave(context.Background(), &proto.ClientLeaveRequest{
 		User:      &user,
 		TimeStamp: int32(lamportTime),

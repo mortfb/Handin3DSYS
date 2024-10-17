@@ -6,6 +6,7 @@ import (
 	proto "handin3/grpc"
 	"io"
 	"log"
+	"math/rand"
 	"time"
 
 	"google.golang.org/grpc"
@@ -59,48 +60,31 @@ func main() {
 	//lamportTime += 1
 
 	user := proto.User{
-		Name:   "Morten",
+		Name:   "Nugget",
 		UserID: 1,
 	}
 
-	//fmt.Println(faf.Message, " ", faf.TimeStamp)
+	lamportTime += 1
+	var broadcastJoin, _ = client.BroadcastJoin(context.Background(), &proto.NewClientJoinedRequest{
+		User:      &user,
+		TimeStamp: int32(lamportTime),
+	})
+	lamportTime += 1
 
-	//lamportTime = compareLT(lamportTime, int(work.TimeStamp))
-	//lamportTime += 1
-
-	//fmt.Println(work.Message, " ", work.TimeStamp)
+	var random = rand.Intn(7) + 1
+	time.Sleep(time.Duration(random) * time.Second)
 
 	lamportTime += 1
 	var pls, _ = client.PublishMessage(context.Background(), &proto.PostMessage{
 		User:      &user,
-		Message:   "Hej",
+		Message:   "yahoo",
 		TimeStamp: int32(lamportTime),
 	})
-
-	fmt.Println(pls.Success, " ", pls.Message, " ")
 
 	lamportTime = compareLT(lamportTime, int(pls.TimeStamp))
 	lamportTime += 1
 
 	fmt.Println("Client Lamport Time ", lamportTime)
-
-	//testing if the server can handle a message that is too long
-	/*
-		lamportTime += 1
-		var pls2, _ = client.PublishMessage(context.Background(), &proto.PostMessage{
-			User:      &user,
-			Message:   "HEJ ALLESAMMEN MIT NAVN ER LUKAS OG JEG ER EN Dasdadasasasasasasasasasasasasasasasasasasasasasasasasasasasdadasdwrfqwgqqgqqqwsadsadwawqfqqweqweqwsdadwadafdqwfwqqfqfqfqfafsafwasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasasas",
-			TimeStamp: int32(lamportTime),
-		})
-
-
-		fmt.Println(pls2.Success, " ", pls2.Message, " ")
-
-		lamportTime = compareLT(lamportTime, int(pls2.TimeStamp))
-		lamportTime += 1
-
-		fmt.Println("Client Lamport Time ", lamportTime)
-	*/
 
 	//NÅR VI ER NÅET TIL AT LAVE BROADCAST LEAVE UDKOMMENTER OG ARBEJD VIDERE!!!
 	/*
@@ -119,15 +103,13 @@ func main() {
 	*/
 
 	//Stream starts here
-	var stream, erro = client.BroadcastAllMessages(context.Background(), &proto.BroadcastAllRequest{})
-
-	var broadcastJoin, _ = client.BroadcastJoin(context.Background(), &proto.NewClientJoinedRequest{
+	var stream, erro = client.BroadcastAllMessages(context.Background(), &proto.BroadcastAllRequest{
 		User:      &user,
 		TimeStamp: int32(lamportTime),
 	})
 
 	//Creating a timer, to run the stream every 5 seconds
-	stop := time.NewTicker(7 * time.Second)
+	stop := time.NewTicker(4 * time.Second)
 
 	if erro != nil {
 		log.Fatalf("Not working")
@@ -156,10 +138,6 @@ func main() {
 				}
 				log.Fatalf("Failed to receive a message: %v", err)
 			}
-			// Should be added to the log
-			//fmt.Println(getMessage.Messages.User.Name, ", ", getMessage.Messages.Message, ", ", getMessage.Messages.TimeStamp)
-
-			// Checking if the message is already in the log
 			var messageInLog = false
 
 			for i := range theLog {
@@ -198,6 +176,24 @@ func main() {
 		message := &theLog[i]
 		fmt.Println(message.User.Name, ", ", message.Message, ", ", message.TimeStamp)
 	}
+
+	lamportTime += 1
+
+	var broadcastLeave, _ = client.BroadcastLeave(context.Background(), &proto.ClientLeaveRequest{
+		User:      &user,
+		TimeStamp: int32(lamportTime),
+	})
+
+	lamportTime += 1
+
+	getLeave, err := broadcastLeave.Recv()
+
+	if err != nil {
+		log.Fatalf("Failed to receive leave message: %v", err)
+	}
+
+	fmt.Println(getLeave.Message, " ", getLeave.TimeStamp)
+
 }
 
 func compareLT(thisLT int, otherLT int) int {

@@ -60,8 +60,6 @@ message ClientLeaveResponse {
     int32 timeStamp = 2;
 }
 
-//message empty{};
-
 message User{
     string name = 1;
     int32 userID = 2;

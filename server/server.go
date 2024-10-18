@@ -58,11 +58,6 @@ func (s *ChittyChatServiceServer) start_server() {
 
 func (s *ChittyChatServiceServer) PublishMessage(ctx context.Context, req *proto.PostMessage) (*proto.PostResponse, error) {
 	log.Printf(req.User.Name + " published a message")
-	srLock.Lock()
-	s.lambortTime += 1
-	s.lambortTime = s.compareLT(int(req.TimeStamp))
-	req.TimeStamp = int32(s.lambortTime)
-	srLock.Unlock()
 
 	if !utf8.ValidString(req.Message) {
 		s.lambortTime += 1
@@ -93,10 +88,6 @@ func (s *ChittyChatServiceServer) PublishMessage(ctx context.Context, req *proto
 			log.Printf("Message: %s %s", s.messages[i].User.Name, s.messages[i].Message)
 		}
 	*/
-
-	srLock.Lock()
-	s.lambortTime += 1
-	srLock.Unlock()
 
 	return &proto.PostResponse{
 		Success: true,
@@ -130,10 +121,6 @@ func (s *ChittyChatServiceServer) BroadcastAllMessages(req *proto.BroadcastAllRe
 	}
 	srLock.Unlock()
 
-	srLock.Lock()
-	s.lambortTime += 1
-	s.lambortTime = s.compareLT(int(req.TimeStamp))
-	srLock.Unlock()
 	//sets up a timer, that executes at a certain interval
 	//timer := time.NewTicker(4 * time.Second)
 
@@ -177,11 +164,6 @@ func (s *ChittyChatServiceServer) BroadcastJoin(req *proto.NewClientJoinedReques
 	}
 	srLock.Unlock()
 
-	srLock.Lock()
-	s.lambortTime += 1
-	s.lambortTime = s.compareLT(int(req.TimeStamp))
-	srLock.Unlock()
-
 	//Server updates the user ID
 	srLock.Lock()
 	if totalAmuntUsers == 0 {
@@ -221,11 +203,6 @@ func (s *ChittyChatServiceServer) BroadcastLeave(req *proto.ClientLeaveRequest, 
 		s.currentUsers[req.User.UserID] = streamsForClients{
 			broadCastLeave: stream}
 	}
-	srLock.Unlock()
-
-	srLock.Lock()
-	s.lambortTime += 1
-	s.lambortTime = s.compareLT(int(req.TimeStamp))
 	srLock.Unlock()
 
 	var message = "User " + req.User.Name + " left at Lamport Time " + strconv.Itoa(s.lambortTime)

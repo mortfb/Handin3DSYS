@@ -7,6 +7,7 @@ import (
 	proto "handin3/grpc"
 	"log"
 	"os"
+	"sync"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -23,6 +24,8 @@ var broadcastJoin proto.ChittyChatService_BroadcastJoinClient
 var broadcastLeave proto.ChittyChatService_BroadcastLeaveClient
 
 var BroadcastAllMessages proto.ChittyChatService_BroadcastAllMessagesClient
+
+var clLock sync.Mutex
 
 // Channels we need to use, so the client knows when to open and recieve broadcasts, so our program dont crash. These needs to be used in a select statement
 var joinedChan = make(chan proto.NewClientJoinedResponse)
@@ -128,4 +131,16 @@ func main() {
 		}
 
 	}
+}
+
+func compareLT(thisLT int, otherLT int) int {
+	var result int
+
+	if thisLT > otherLT {
+		result = thisLT
+	} else {
+		result = otherLT
+	}
+
+	return result
 }

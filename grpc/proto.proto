@@ -5,13 +5,12 @@ option go_package = "handin3/grpc/proto";
 service ChittyChatService {
     rpc PublishMessage(PostMessage) returns (PostResponse) {};
     
-    rpc BroadcastAllMessages(BroadcastAllRequest) returns (stream BroadcastAllResponse) {};//may need to be a stream
+    rpc BroadcastAllMessages(BroadcastAllRequest) returns (stream BroadcastAllResponse) {};
 
     //rpc NewClientJoined(NewClientJoinedRequest) returns (stream NewClientJoinedResponse) {};
     
     //rpc ClientLeave(ClientLeaveRequest) returns (stream ClientLeaveResponse) {};
 
-    //Not thought out yet(WIP)
     rpc BroadcastJoin(NewClientJoinedRequest) returns (stream NewClientJoinedResponse) {};
 
     rpc BroadcastLeave(ClientLeaveRequest) returns (stream ClientLeaveResponse) {};

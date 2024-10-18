@@ -24,6 +24,17 @@ var broadcastLeave proto.ChittyChatService_BroadcastLeaveClient
 
 var BroadcastAllMessages proto.ChittyChatService_BroadcastAllMessagesClient
 
+// Channels we need to use, so the client knows when to open and recieve broadcasts, so our program dont crash. These needs to be used in a select statement
+var joinedChan = make(chan proto.NewClientJoinedResponse)
+
+var leftChan = make(chan proto.ClientLeaveResponse)
+
+var broadCastAllChan = make(chan proto.PostMessage)
+
+//NOTE: We need to use goroutines to handle the broadcasts
+//NOTE: We may need to make more rpc methods, for out clients joining and leaving (splitting the broadcast into two methods), as we did before
+//NOTE: Still missing lamportTime.
+
 func main() {
 	conn, err := grpc.Dial("localhost:5050", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -62,7 +73,7 @@ func main() {
 		var input string
 
 		fmt.Println("Hi", thisUser.Name, ", please enter what you want to do ")
-		fmt.Println("type 'list' to list all options")
+		fmt.Println("type 'list' to list all commands")
 
 		fmt.Scanln(&input)
 
@@ -70,6 +81,7 @@ func main() {
 			fmt.Println("type 'send' to send a message")
 			fmt.Println("type 'quit' to quit")
 			fmt.Println("type 'profile' to see your profile")
+			fmt.Println("type 'log' to see the log")
 			continue
 		}
 
@@ -91,9 +103,16 @@ func main() {
 		}
 
 		if input == "profile" {
-			fmt.Println("Profile: ")
+			fmt.Println("Your Profile: ")
 			fmt.Println("Name: ", thisUser.Name)
 			fmt.Println("UserID: ", thisUser.UserID)
+		}
+
+		if input == "log" {
+			for i := range theLog {
+				message := &theLog[i]
+				fmt.Println(message.User.Name, ": ", message.Message, ", ", message.TimeStamp)
+			}
 		}
 
 		if input == "quit" {
@@ -107,5 +126,6 @@ func main() {
 			log.Printf("Logging out")
 			break
 		}
+
 	}
 }

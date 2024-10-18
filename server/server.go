@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-type clientStreams struct {
+type streamsForClients struct {
 	broadCastAll   proto.ChittyChatService_BroadcastAllMessagesServer
 	broadCastJoin  proto.ChittyChatService_BroadcastJoinServer
 	broadCastLeave proto.ChittyChatService_BroadcastLeaveServer
@@ -22,17 +22,17 @@ type ChittyChatServiceServer struct {
 	proto.UnimplementedChittyChatServiceServer
 	messages []proto.PostMessage
 
-	activeUsers map[int32]clientStreams
+	currentUsers map[int32]streamsForClients
 
 	lambortTime int
 }
 
-var muLock sync.Mutex
+var srLock sync.Mutex
 
 var totalAmuntUsers int = 0
 
 func main() {
-	server := &ChittyChatServiceServer{messages: []proto.PostMessage{}, activeUsers: map[int32]clientStreams{}, lambortTime: 0}
+	server := &ChittyChatServiceServer{messages: []proto.PostMessage{}, currentUsers: map[int32]streamsForClients{}, lambortTime: 0}
 
 	//This starts the server
 	server.start_server()
@@ -58,11 +58,11 @@ func (s *ChittyChatServiceServer) start_server() {
 
 func (s *ChittyChatServiceServer) PublishMessage(ctx context.Context, req *proto.PostMessage) (*proto.PostResponse, error) {
 	log.Printf(req.User.Name + " published a message")
-	muLock.Lock()
+	srLock.Lock()
 	s.lambortTime += 1
 	s.lambortTime = s.compareLT(int(req.TimeStamp))
 	req.TimeStamp = int32(s.lambortTime)
-	muLock.Unlock()
+	srLock.Unlock()
 
 	if !utf8.ValidString(req.Message) {
 		s.lambortTime += 1
@@ -94,9 +94,9 @@ func (s *ChittyChatServiceServer) PublishMessage(ctx context.Context, req *proto
 		}
 	*/
 
-	muLock.Lock()
+	srLock.Lock()
 	s.lambortTime += 1
-	muLock.Unlock()
+	srLock.Unlock()
 
 	return &proto.PostResponse{
 		Success: true,
@@ -118,25 +118,26 @@ func (s *ChittyChatServiceServer) compareLT(otherLT int) int {
 
 func (s *ChittyChatServiceServer) BroadcastAllMessages(req *proto.BroadcastAllRequest, stream proto.ChittyChatService_BroadcastAllMessagesServer) error {
 	log.Printf(req.User.Name + " broadcasts all messages")
-	muLock.Lock()
-	check, exists := s.activeUsers[req.User.UserID]
+	srLock.Lock()
+	check, exists := s.currentUsers[req.User.UserID]
 	if exists {
 		//if the user already exists, we update the stream
 		check.broadCastAll = stream
-		s.activeUsers[req.User.UserID] = check
+		s.currentUsers[req.User.UserID] = check
 	} else {
-		s.activeUsers[req.User.UserID] = clientStreams{
+		s.currentUsers[req.User.UserID] = streamsForClients{
 			broadCastAll: stream}
 	}
-	muLock.Unlock()
+	srLock.Unlock()
 
-	muLock.Lock()
+	srLock.Lock()
 	s.lambortTime += 1
 	s.lambortTime = s.compareLT(int(req.TimeStamp))
-	muLock.Unlock()
+	srLock.Unlock()
 	//sets up a timer, that executes at a certain interval
 	//timer := time.NewTicker(4 * time.Second)
 
+	//Needs to be a pointer, since we in our methods send pointers
 	var tmpMessages []*proto.PostMessage
 	for i := range s.messages {
 		tmpMessages = append(tmpMessages, &proto.PostMessage{
@@ -146,8 +147,9 @@ func (s *ChittyChatServiceServer) BroadcastAllMessages(req *proto.BroadcastAllRe
 		})
 	}
 
-	for _, user := range s.activeUsers {
-		err := user.broadCastAll.Send(&proto.BroadcastAllResponse{
+	for i := range s.currentUsers {
+		//may need to go back to different loop format: _,user := range s.currentUsers
+		err := s.currentUsers[i].broadCastAll.Send(&proto.BroadcastAllResponse{
 			Messages:  tmpMessages,
 			TimeStamp: int32(s.lambortTime),
 		})
@@ -163,25 +165,25 @@ func (s *ChittyChatServiceServer) BroadcastAllMessages(req *proto.BroadcastAllRe
 
 func (s *ChittyChatServiceServer) BroadcastJoin(req *proto.NewClientJoinedRequest, stream proto.ChittyChatService_BroadcastJoinServer) error {
 	log.Printf(req.User.Name + " joins the chat")
-	muLock.Lock()
-	check, exists := s.activeUsers[req.User.UserID]
+	srLock.Lock()
+	check, exists := s.currentUsers[req.User.UserID]
 	if exists {
 		//if the user already exists, we update the stream
 		check.broadCastJoin = stream
-		s.activeUsers[req.User.UserID] = check
+		s.currentUsers[req.User.UserID] = check
 	} else {
-		s.activeUsers[req.User.UserID] = clientStreams{
+		s.currentUsers[req.User.UserID] = streamsForClients{
 			broadCastJoin: stream}
 	}
-	muLock.Unlock()
+	srLock.Unlock()
 
-	muLock.Lock()
+	srLock.Lock()
 	s.lambortTime += 1
 	s.lambortTime = s.compareLT(int(req.TimeStamp))
-	muLock.Unlock()
+	srLock.Unlock()
 
 	//Server updates the user ID
-	muLock.Lock()
+	srLock.Lock()
 	if totalAmuntUsers == 0 {
 		totalAmuntUsers += 1
 		req.User.UserID = 0
@@ -189,12 +191,13 @@ func (s *ChittyChatServiceServer) BroadcastJoin(req *proto.NewClientJoinedReques
 		req.User.UserID = int32(totalAmuntUsers)
 		totalAmuntUsers += 1
 	}
-	muLock.Unlock()
+	srLock.Unlock()
 
 	var message = "User " + req.User.Name + " joined at Lamport Time " + strconv.Itoa(s.lambortTime)
 
-	for _, user := range s.activeUsers {
-		err := user.broadCastJoin.Send(&proto.NewClientJoinedResponse{
+	for i := range s.currentUsers {
+		//may need to go back to different loop format: _,user := range s.currentUsers
+		err := s.currentUsers[i].broadCastJoin.Send(&proto.NewClientJoinedResponse{
 			Message:   message,
 			TimeStamp: int32(s.lambortTime),
 		})
@@ -208,27 +211,28 @@ func (s *ChittyChatServiceServer) BroadcastJoin(req *proto.NewClientJoinedReques
 
 func (s *ChittyChatServiceServer) BroadcastLeave(req *proto.ClientLeaveRequest, stream proto.ChittyChatService_BroadcastLeaveServer) error {
 	log.Printf(req.User.Name + " leaves")
-	muLock.Lock()
-	check, exists := s.activeUsers[req.User.UserID]
+	srLock.Lock()
+	check, exists := s.currentUsers[req.User.UserID]
 	if exists {
 		//if the user already exists, we update the stream
 		check.broadCastLeave = stream
-		s.activeUsers[req.User.UserID] = check
+		s.currentUsers[req.User.UserID] = check
 	} else {
-		s.activeUsers[req.User.UserID] = clientStreams{
+		s.currentUsers[req.User.UserID] = streamsForClients{
 			broadCastLeave: stream}
 	}
-	muLock.Unlock()
+	srLock.Unlock()
 
-	muLock.Lock()
+	srLock.Lock()
 	s.lambortTime += 1
 	s.lambortTime = s.compareLT(int(req.TimeStamp))
-	muLock.Unlock()
+	srLock.Unlock()
 
 	var message = "User " + req.User.Name + " left at Lamport Time " + strconv.Itoa(s.lambortTime)
 
-	for _, user := range s.activeUsers {
-		err := user.broadCastLeave.Send(&proto.ClientLeaveResponse{
+	for i := range s.currentUsers {
+		//may need to go back to different loop format: _,user := range s.currentUsers
+		err := s.currentUsers[i].broadCastLeave.Send(&proto.ClientLeaveResponse{
 			Message:   message,
 			TimeStamp: int32(s.lambortTime),
 		})
@@ -238,7 +242,7 @@ func (s *ChittyChatServiceServer) BroadcastLeave(req *proto.ClientLeaveRequest, 
 		}
 	}
 
-	delete(s.activeUsers, req.User.UserID)
+	delete(s.currentUsers, req.User.UserID)
 
 	return nil
 }

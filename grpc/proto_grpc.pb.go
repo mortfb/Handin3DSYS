@@ -18,7 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ChittyChatServiceClient interface {
-	JoinServer(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*JoinResponse, error)
+	JoinServer(ctx context.Context, in *JoinRequest, opts ...grpc.CallOption) (*JoinResponse, error)
 	Connected(ctx context.Context, opts ...grpc.CallOption) (ChittyChatService_ConnectedClient, error)
 }
 
@@ -30,7 +30,7 @@ func NewChittyChatServiceClient(cc grpc.ClientConnInterface) ChittyChatServiceCl
 	return &chittyChatServiceClient{cc}
 }
 
-func (c *chittyChatServiceClient) JoinServer(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*JoinResponse, error) {
+func (c *chittyChatServiceClient) JoinServer(ctx context.Context, in *JoinRequest, opts ...grpc.CallOption) (*JoinResponse, error) {
 	out := new(JoinResponse)
 	err := c.cc.Invoke(ctx, "/ChittyChatService/joinServer", in, out, opts...)
 	if err != nil {
@@ -74,7 +74,7 @@ func (x *chittyChatServiceConnectedClient) Recv() (*PostMessage, error) {
 // All implementations must embed UnimplementedChittyChatServiceServer
 // for forward compatibility
 type ChittyChatServiceServer interface {
-	JoinServer(context.Context, *Empty) (*JoinResponse, error)
+	JoinServer(context.Context, *JoinRequest) (*JoinResponse, error)
 	Connected(ChittyChatService_ConnectedServer) error
 	mustEmbedUnimplementedChittyChatServiceServer()
 }
@@ -83,7 +83,7 @@ type ChittyChatServiceServer interface {
 type UnimplementedChittyChatServiceServer struct {
 }
 
-func (UnimplementedChittyChatServiceServer) JoinServer(context.Context, *Empty) (*JoinResponse, error) {
+func (UnimplementedChittyChatServiceServer) JoinServer(context.Context, *JoinRequest) (*JoinResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method JoinServer not implemented")
 }
 func (UnimplementedChittyChatServiceServer) Connected(ChittyChatService_ConnectedServer) error {
@@ -103,7 +103,7 @@ func RegisterChittyChatServiceServer(s grpc.ServiceRegistrar, srv ChittyChatServ
 }
 
 func _ChittyChatService_JoinServer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
+	in := new(JoinRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ func _ChittyChatService_JoinServer_Handler(srv interface{}, ctx context.Context,
 		FullMethod: "/ChittyChatService/joinServer",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChittyChatServiceServer).JoinServer(ctx, req.(*Empty))
+		return srv.(ChittyChatServiceServer).JoinServer(ctx, req.(*JoinRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

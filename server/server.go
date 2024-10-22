@@ -15,8 +15,7 @@ type ChittyChatServiceServer struct {
 	proto.UnimplementedChittyChatServiceServer
 	messages []proto.PostMessage
 
-	currentUsers []proto.ChittyChatService_BroadcastMessagesServer
-
+	currentUsers    []proto.ChittyChatService_ConnectedServer
 	totalAmuntUsers int32
 
 	lamportTime int
@@ -98,7 +97,7 @@ func (server *ChittyChatServiceServer) compareLT(otherLT int) int {
 	return result
 }
 
-func (server *ChittyChatServiceServer) BroadcastMessages(req *proto.BroadcastRequest, stream proto.ChittyChatService_BroadcastMessagesServer) error {
+func (server *ChittyChatServiceServer) BroadcastMessages(req *proto.BroadcastRequest, stream proto.ChittyChatService_BroadcastConnectedServer) error {
 	log.Printf(req.User.Name + " broadcasts all messages")
 	//Needs to be a pointer, since we in our methods send pointers
 	//We send the entire array over, instead of each messsage idividually.

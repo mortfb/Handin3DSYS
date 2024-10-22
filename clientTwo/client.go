@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"sync"
+	"unicode/utf8"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -44,6 +45,8 @@ func main() {
 
 	var loggedIn bool = false
 
+	//DER SKAL LAVES NOGET HVOR CLIENTEN KAN MODTAGE BROADCASTS
+
 	for {
 		if !loggedIn {
 			fmt.Println("Enter your name: ")
@@ -56,37 +59,40 @@ func main() {
 				UserID: 1,
 			}
 
+			joinResponse, err := client.JoinServer(context.Background(), &proto.JoinRequest{
+				User:      &thisUser,
+				TimeStamp: int32(lamportTime),
+			})
+
+			if err != nil {
+				log.Fatalf("Failed to join server: %v", err)
+			}
+
+			//updates the ID of the user
+			thisUser.UserID = joinResponse.UserID
+
 			log.Println("Logging in as ", name)
-			var message = thisUser.Name + " joined at Lamport Time: "
-			BroadcastStream, _ = client.Connected(context.Background(), &proto.PostMessage{
+			var message = thisUser.Name + " joined at Lamport Time: " + string(lamportTime)
+			BroadcastStream, _ = client.Connected(context.Background())
+			BroadcastStream.Send(&proto.PostMessage{
 				User:      &thisUser,
 				Message:   message,
 				TimeStamp: int32(lamportTime),
 			})
 
+			go GetMessages()
 			loggedIn = true
+
 		}
 
 		var input string
-		/*GetMessages, _ := BroadcastStream.Recv()
-		var gofor []*proto.PostMessage
-		if GetMessages != nil {
-			var gofor = GetMessages.Messages
-			log.Printf("received broadcast messages")
-			if gofor == nil {
-				log.Printf("recieved messages are null")
-			}
-		}
-		for i := range gofor {
-			fmt.Printf("Message: %s", gofor[i].Message)
-		}*/
 
 		fmt.Println("Hi", thisUser.Name, ", please enter what you want to do ")
-		fmt.Println("type 'list' to list all commands")
+		fmt.Println("type 'help' to list all commands")
 
 		fmt.Scanln(&input)
 
-		if input == "list" {
+		if input == "help" {
 			fmt.Println("type 'send' to send a message")
 			fmt.Println("type 'quit' to quit")
 			fmt.Println("type 'profile' to see your profile")
@@ -98,17 +104,18 @@ func main() {
 			fmt.Println("Enter your message: ")
 			message, _ := reader.ReadString('\n')
 
-			var msg, _ = client.PublishMessage(context.Background(), &proto.PostMessage{
-				User:      &thisUser,
-				Message:   message,
-				TimeStamp: int32(lamportTime),
-			})
+			if !checkMessage(message) {
+				//If the message is invalid, we skip the rest of the loop and wait new input
+				continue
+			} else {
+				log.Printf("Sending message...")
+				BroadcastStream.Send(&proto.PostMessage{
+					User:      &thisUser,
+					Message:   message,
+					TimeStamp: int32(lamportTime),
+				})
 
-			if !msg.Success {
-				fmt.Println(msg.Message)
 			}
-
-			//Brug msg til at opdatere lamportTime
 		}
 
 		if input == "profile" {
@@ -127,27 +134,51 @@ func main() {
 		if input == "quit" {
 			//Her skal den håndtere broadcasten over at den selv forlader serveren
 			var message = thisUser.Name + " left at Lamport Time: "
-			client.PublishMessage(context.Background(), &proto.PostMessage{
+
+			BroadcastStream.Send(&proto.PostMessage{
 				User:      &thisUser,
 				Message:   message,
 				TimeStamp: int32(lamportTime),
 			})
 
-			log.Printf("Logging out")
+			log.Printf(thisUser.Name + " logging out")
 			break
 		}
-
 	}
 }
 
-func compareLT(thisLT int, otherLT int) int {
-	var result int
-
-	if thisLT > otherLT {
-		result = thisLT
-	} else {
-		result = otherLT
+func GetMessages() {
+	for {
+		GetMessages, _ := BroadcastStream.Recv()
+		if GetMessages != nil {
+			theLog = append(theLog, *GetMessages)
+			log.Printf("received broadcast messages")
+		}
 	}
+}
 
-	return result
+func compareLamportTime(lamportTime int, messageLamportTime int) int {
+	if lamportTime > messageLamportTime {
+		return lamportTime + 1
+	} else {
+		lamportTime = messageLamportTime
+		return lamportTime + 1
+	}
+}
+
+func checkMessage(message string) bool {
+	if !utf8.ValidString(message) {
+		log.Printf("Messages must be valid in utf8")
+		return false
+	} else if len(message) > 128 {
+		log.Printf("Messages cant be longer than 128 characters")
+		return false
+
+	} else if len(message) == 0 {
+		log.Printf("Message must not be empty")
+		return false
+
+	} else {
+		return true
+	}
 }

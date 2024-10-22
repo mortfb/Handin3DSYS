@@ -3,7 +3,7 @@ syntax = "proto3";
 option go_package = "handin3/grpc/proto";
 
 service ChittyChatService {
-    rpc joinServer(empty) returns (JoinResponse){};
+    rpc joinServer(JoinRequest) returns (JoinResponse){};
     rpc connected(stream PostMessage) returns (stream PostMessage){};
     
     //rpc PublishMessage(PostMessage) returns (PostResponse) {};
@@ -22,10 +22,14 @@ message PostResponse {
     bool success = 3;
 }
 
-message empty{};
+message JoinRequest{
+    User user = 1;
+    int32 timeStamp = 2;
+};
 
 message JoinResponse{
-    int32 UserID = 1;
+    int32 timeStamp = 1;
+    int32 userID = 2;
 }
 
 /*

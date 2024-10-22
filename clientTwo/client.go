@@ -19,12 +19,12 @@ var lamportTime int = 0
 
 var thisUser proto.User
 
-var BroadcastMessages proto.ChittyChatService_BroadcastMessagesClient
+var BroadcastStream proto.ChittyChatService_BroadcastMessagesClient
 
 var clLock sync.Mutex
 
-// Channels we need to use, so the client knows when to open and recieve broadcasts, so our program dont crash. These needs to be used in a select statement
-var broadcastChan = make(chan proto.PostMessage)
+// Channels we need to use, so the client knows when to open and receive broadcasts, so our program dont crash. These needs to be used in a select statement
+var broadCastAllChan = make(chan []*proto.PostMessage)
 
 //NOTE: We need to use goroutines to handle the broadcasts
 //NOTE: We may need to make more rpc methods, for out clients joining and leaving (splitting the broadcast into two methods), as we did before
@@ -57,11 +57,34 @@ func main() {
 			}
 
 			log.Println("Logging in as ", name)
+			BroadcastStream, _ = client.BroadcastMessages(context.Background(), &proto.BroadcastRequest{
+				User:      &thisUser,
+				TimeStamp: int32(lamportTime),
+			})
+
+			var message = thisUser.Name + " joined at Lamport Time: "
+			client.PublishMessage(context.Background(), &proto.PostMessage{
+				User:      &thisUser,
+				Message:   message,
+				TimeStamp: int32(lamportTime),
+			})
 
 			loggedIn = true
 		}
 
 		var input string
+		GetMessages, _ := BroadcastStream.Recv()
+		var gofor []*proto.PostMessage
+		if GetMessages != nil {
+			var gofor = GetMessages.Messages
+			log.Printf("received broadcast messages")
+			if gofor == nil {
+				log.Printf("recieved messages are null")
+			}
+		}
+		for i := range gofor {
+			fmt.Printf("Message: %s", gofor[i].Message)
+		}
 
 		fmt.Println("Hi", thisUser.Name, ", please enter what you want to do ")
 		fmt.Println("type 'list' to list all commands")
@@ -86,6 +109,10 @@ func main() {
 				TimeStamp: int32(lamportTime),
 			})
 
+			if !msg.Success {
+				fmt.Println(msg.Message)
+			}
+
 			//Brug msg til at opdatere lamportTime
 		}
 
@@ -103,8 +130,13 @@ func main() {
 		}
 
 		if input == "quit" {
-
 			//Her skal den håndtere broadcasten over at den selv forlader serveren
+			var message = thisUser.Name + " left at Lamport Time: "
+			client.PublishMessage(context.Background(), &proto.PostMessage{
+				User:      &thisUser,
+				Message:   message,
+				TimeStamp: int32(lamportTime),
+			})
 
 			log.Printf("Logging out")
 			break

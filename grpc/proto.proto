@@ -17,6 +17,7 @@ message PostMessage {
 message PostResponse {
     string message = 1;
     int32 timeStamp = 2;
+    bool success = 3;
 }
 
 message BroadcastRequest {
@@ -25,7 +26,7 @@ message BroadcastRequest {
 };
 
 message BroadcastResponse {
-    PostMessage messages = 1; //returns a collection of PostMessage instead of individual strings and ints
+    repeated PostMessage messages = 1; //returns a collection of PostMessage instead of individual strings and ints
     int32 timeStamp = 2;
 }
 

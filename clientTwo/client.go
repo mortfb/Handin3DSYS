@@ -19,7 +19,7 @@ var lamportTime int = 0
 
 var thisUser proto.User
 
-var BroadcastStream proto.ChittyChatService_BroadcastMessagesClient
+var BroadcastStream proto.ChittyChatService_ConnectedClient
 
 var clLock sync.Mutex
 
@@ -57,13 +57,8 @@ func main() {
 			}
 
 			log.Println("Logging in as ", name)
-			BroadcastStream, _ = client.BroadcastMessages(context.Background(), &proto.BroadcastRequest{
-				User:      &thisUser,
-				TimeStamp: int32(lamportTime),
-			})
-
 			var message = thisUser.Name + " joined at Lamport Time: "
-			client.PublishMessage(context.Background(), &proto.PostMessage{
+			BroadcastStream, _ = client.Connected(context.Background(), &proto.PostMessage{
 				User:      &thisUser,
 				Message:   message,
 				TimeStamp: int32(lamportTime),
@@ -73,7 +68,7 @@ func main() {
 		}
 
 		var input string
-		GetMessages, _ := BroadcastStream.Recv()
+		/*GetMessages, _ := BroadcastStream.Recv()
 		var gofor []*proto.PostMessage
 		if GetMessages != nil {
 			var gofor = GetMessages.Messages
@@ -84,7 +79,7 @@ func main() {
 		}
 		for i := range gofor {
 			fmt.Printf("Message: %s", gofor[i].Message)
-		}
+		}*/
 
 		fmt.Println("Hi", thisUser.Name, ", please enter what you want to do ")
 		fmt.Println("type 'list' to list all commands")

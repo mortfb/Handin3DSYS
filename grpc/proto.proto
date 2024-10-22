@@ -5,15 +5,7 @@ option go_package = "handin3/grpc/proto";
 service ChittyChatService {
     rpc PublishMessage(PostMessage) returns (PostResponse) {};
     
-    rpc BroadcastAllMessages(BroadcastAllRequest) returns (stream BroadcastAllResponse) {};
-
-    //rpc NewClientJoined(NewClientJoinedRequest) returns (stream NewClientJoinedResponse) {};
-    
-    //rpc ClientLeave(ClientLeaveRequest) returns (stream ClientLeaveResponse) {};
-
-    rpc BroadcastJoin(NewClientJoinedRequest) returns (stream NewClientJoinedResponse) {};
-
-    rpc BroadcastLeave(ClientLeaveRequest) returns (stream ClientLeaveResponse) {};
+    rpc BroadcastMessages(BroadcastRequest) returns (stream BroadcastResponse) {};
 }
 
 message PostMessage {
@@ -23,39 +15,17 @@ message PostMessage {
 }
 
 message PostResponse {
-    bool success = 1;
-    string message = 2;
-    int32 timeStamp = 3;
+    string message = 1;
+    int32 timeStamp = 2;
 }
 
-message BroadcastAllRequest {
+message BroadcastRequest {
     User user = 1;
     int32 timeStamp = 2;
 };
 
-message BroadcastAllResponse {
-    repeated PostMessage messages = 1; //returns a collection of PostMessage instead of individual strings and ints
-    int32 timeStamp = 2;
-}
-
-message NewClientJoinedRequest {
-    User user = 1;
-    int32 timeStamp = 2;
-}
-
-message NewClientJoinedResponse {
-    string message = 1;
-    int32 timeStamp = 2;
-}
-
-
-message ClientLeaveRequest {
-    User user = 1;
-    int32 timeStamp = 2;
-}
-
-message ClientLeaveResponse {
-    string message = 1;
+message BroadcastResponse {
+    PostMessage messages = 1; //returns a collection of PostMessage instead of individual strings and ints
     int32 timeStamp = 2;
 }
 

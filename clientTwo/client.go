@@ -19,20 +19,12 @@ var lamportTime int = 0
 
 var thisUser proto.User
 
-var broadcastJoin proto.ChittyChatService_BroadcastJoinClient
-
-var broadcastLeave proto.ChittyChatService_BroadcastLeaveClient
-
-var BroadcastAllMessages proto.ChittyChatService_BroadcastAllMessagesClient
+var BroadcastMessages proto.ChittyChatService_BroadcastMessagesClient
 
 var clLock sync.Mutex
 
 // Channels we need to use, so the client knows when to open and recieve broadcasts, so our program dont crash. These needs to be used in a select statement
-var joinedChan = make(chan proto.NewClientJoinedResponse)
-
-var leftChan = make(chan proto.ClientLeaveResponse)
-
-var broadCastAllChan = make(chan proto.PostMessage)
+var broadcastChan = make(chan proto.PostMessage)
 
 //NOTE: We need to use goroutines to handle the broadcasts
 //NOTE: We may need to make more rpc methods, for out clients joining and leaving (splitting the broadcast into two methods), as we did before
@@ -65,10 +57,6 @@ func main() {
 			}
 
 			log.Println("Logging in as ", name)
-			broadcastJoin, _ = client.BroadcastJoin(context.Background(), &proto.NewClientJoinedRequest{
-				User:      &thisUser,
-				TimeStamp: 0,
-			})
 
 			loggedIn = true
 		}
@@ -98,10 +86,6 @@ func main() {
 				TimeStamp: int32(lamportTime),
 			})
 
-			if !msg.Success {
-				fmt.Println(msg.Message)
-			}
-
 			//Brug msg til at opdatere lamportTime
 		}
 
@@ -119,10 +103,6 @@ func main() {
 		}
 
 		if input == "quit" {
-			broadcastLeave, _ = client.BroadcastLeave(context.Background(), &proto.ClientLeaveRequest{
-				User:      &thisUser,
-				TimeStamp: int32(lamportTime),
-			})
 
 			//Her skal den håndtere broadcasten over at den selv forlader serveren
 

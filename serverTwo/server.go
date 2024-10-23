@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	proto "handin3/grpc"
 	"log"
@@ -29,12 +30,6 @@ func main() {
 		lamportTime:      0,
 	}
 
-	//This starts the server
-	server.start_server()
-
-}
-
-func (server *ChittyChatServiceServer) start_server() {
 	log.Printf("Server started")
 	grpcServer := grpc.NewServer()
 	listener, err := net.Listen("tcp", ":5050")
@@ -44,15 +39,15 @@ func (server *ChittyChatServiceServer) start_server() {
 
 	//Register the server, from proto-file
 	proto.RegisterChittyChatServiceServer(grpcServer, server)
-
 	err = grpcServer.Serve(listener)
 
 	if err != nil {
 		log.Fatalf("Did not work")
 	}
+
 }
 
-func (server *ChittyChatServiceServer) joinServer(req *proto.JoinRequest) *proto.JoinResponse {
+func (server *ChittyChatServiceServer) JoinServer(ctx context.Context, req *proto.JoinRequest) (*proto.JoinResponse, error) {
 	var tmp = server.totalAmountUsers
 	server.totalAmountUsers++
 
@@ -78,7 +73,7 @@ func (server *ChittyChatServiceServer) joinServer(req *proto.JoinRequest) *proto
 
 	}
 
-	return joinResponse
+	return joinResponse, nil
 
 }
 

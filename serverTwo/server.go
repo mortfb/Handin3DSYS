@@ -1,7 +1,7 @@
 package main
 
 import (
-	"context"
+	"fmt"
 	proto "handin3/grpc"
 	"log"
 	"net"
@@ -18,8 +18,6 @@ type ChittyChatServiceServer struct {
 	totalAmountUsers int32
 
 	lamportTime int
-
-	messages []proto.PostMessage
 }
 
 var srLock sync.Mutex
@@ -29,7 +27,6 @@ func main() {
 		currentUsers:     []proto.ChittyChatService_ConnectedServer{},
 		totalAmountUsers: 0,
 		lamportTime:      0,
-		messages:         []proto.PostMessage{},
 	}
 
 	//This starts the server
@@ -55,20 +52,37 @@ func (server *ChittyChatServiceServer) start_server() {
 	}
 }
 
-func (server *ChittyChatServiceServer) JoinServer(ctx context.Context, req *proto.JoinRequest) (*proto.JoinResponse, error) {
-	srLock.Lock()
-	server.lamportTime = compareLamportTime(server.lamportTime, int(req.TimeStamp))
+func (server *ChittyChatServiceServer) joinServer(req *proto.JoinRequest) *proto.JoinResponse {
+	var tmp = server.totalAmountUsers
+	server.totalAmountUsers++
 
-	var response = &proto.JoinResponse{
-		UserID:    server.totalAmountUsers,
+	joinResponse := &proto.JoinResponse{
+		UserID:    tmp,
 		TimeStamp: int32(server.lamportTime),
 	}
-	server.totalAmountUsers++
-	srLock.Unlock()
-	return response, nil
+
+	joinMessage := &proto.PostMessage{
+		Message:   fmt.Sprintf("User %s has joined the chat", req.User.Name),
+		User:      req.User,
+		TimeStamp: int32(server.lamportTime),
+	}
+
+	for _, client := range server.currentUsers {
+		if joinMessage.User.UserID != tmp {
+			err := client.Send(joinMessage)
+			if err != nil {
+				fmt.Println("cant print the joinMessage")
+			}
+
+		}
+
+	}
+
+	return joinResponse
+
 }
 
-func sendMessages(stream proto.ChittyChatService_ConnectedServer, server *ChittyChatServiceServer) {
+func (server *ChittyChatServiceServer) messages(stream proto.ChittyChatService_ConnectedServer) {
 	for {
 		message, err := stream.Recv()
 		if err == nil {
@@ -77,46 +91,13 @@ func sendMessages(stream proto.ChittyChatService_ConnectedServer, server *Chitty
 					server.currentUsers[i].Send(message)
 				}
 			}
-		} else {
-			log.Println("Did not receive any messages")
 		}
-
 	}
 }
 
 func (server *ChittyChatServiceServer) connected(req *proto.PostMessage, stream proto.ChittyChatService_ConnectedServer) *proto.ChittyChatService_ConnectedServer {
-	//Lige nu bruges req ikke til noget, hvad skal den bruges til?
-
 	server.currentUsers = append(server.currentUsers, stream)
+	go server.messages(stream)
 
-	//Hvorfor gøre dette?
-	go sendMessages(stream, server)
-
-	//Hivs man kan gøre dette i stedet?
-	//Ved ikke om det her er bedre/være end at bruge goroutinen
-	for {
-		message, err := stream.Recv()
-		if err == nil {
-			srLock.Lock()
-			server.lamportTime = compareLamportTime(server.lamportTime, int(message.TimeStamp))
-			server.messages = append(server.messages, *message)
-			srLock.Unlock()
-
-			//Var server.sendMessages(stream) før, men den brokkede sig over at den ikke blev brugt ovre i client
-			//DET KAN GODT VÆRE DEN SKAL ÆNDRES TILBAGE, HVIS DET VIRKER BEDRE
-
-			//Den skal vel kun bruges her i server, derfor kan skal man ikke have at den kaldes på en (server *ChittyChatServiceServer), men bare som "en normal" metode
-			//Har også ændret det i selve metoden, så den bare tager den server, som den skal bruge
-			sendMessages(stream, server)
-		}
-	}
-}
-
-func compareLamportTime(lamportTime int, messageLamportTime int) int {
-	if lamportTime > messageLamportTime {
-		return lamportTime + 1
-	} else {
-		lamportTime = messageLamportTime
-		return lamportTime + 1
-	}
+	return &stream
 }

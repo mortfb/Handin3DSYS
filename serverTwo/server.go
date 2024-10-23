@@ -23,6 +23,7 @@ type ChittyChatServiceServer struct {
 }
 
 var srLock sync.Mutex
+var waitGroup sync.WaitGroup
 
 func main() {
 	server := &ChittyChatServiceServer{
@@ -34,7 +35,6 @@ func main() {
 
 	//This starts the server
 	server.start_server()
-
 }
 
 func (server *ChittyChatServiceServer) start_server() {
@@ -72,29 +72,50 @@ func sendMessages(stream proto.ChittyChatService_ConnectedServer, server *Chitty
 	for {
 		message, err := stream.Recv()
 		if err == nil {
+			log.Printf("Message: %s" + message.Message)
 			for i := range server.currentUsers {
 				if i != int(message.User.UserID) { //userID
-					server.currentUsers[i].Send(message)
+					server.currentUsers[i].Send(&proto.PostResponse{
+						User:      message.User,
+						Message:   message.Message,
+						TimeStamp: message.GetTimeStamp(),
+					})
 				}
 			}
 		} else {
-			log.Println("Did not receive any messages")
+			//log.Println("Did not receive any messages")
 		}
 
 	}
 }
 
-func (server *ChittyChatServiceServer) connected(req *proto.PostMessage, stream proto.ChittyChatService_ConnectedServer) *proto.ChittyChatService_ConnectedServer {
+func (server *ChittyChatServiceServer) Connected(stream proto.ChittyChatService_ConnectedServer) error {
 	//Lige nu bruges req ikke til noget, hvad skal den bruges til?
-
 	server.currentUsers = append(server.currentUsers, stream)
-
 	//Hvorfor gøre dette?
-	go sendMessages(stream, server)
+
+	for {
+		message, err := stream.Recv()
+		if err == nil {
+			log.Println("Message: " + message.Message)
+			for i := range server.currentUsers {
+				if i != int(message.User.UserID) { //userID
+					server.currentUsers[i].Send(&proto.PostResponse{
+						User:      message.User,
+						Message:   message.Message,
+						TimeStamp: message.GetTimeStamp(),
+					})
+				}
+			}
+		} else {
+			//log.Println("Did not receive any messages")
+		}
+
+	}
 
 	//Hivs man kan gøre dette i stedet?
 	//Ved ikke om det her er bedre/være end at bruge goroutinen
-	for {
+	/*for {
 		message, err := stream.Recv()
 		if err == nil {
 			srLock.Lock()
@@ -109,7 +130,8 @@ func (server *ChittyChatServiceServer) connected(req *proto.PostMessage, stream 
 			//Har også ændret det i selve metoden, så den bare tager den server, som den skal bruge
 			sendMessages(stream, server)
 		}
-	}
+	}*/
+	return nil
 }
 
 func compareLamportTime(lamportTime int, messageLamportTime int) int {

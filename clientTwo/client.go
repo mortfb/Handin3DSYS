@@ -25,7 +25,6 @@ var BroadcastStream proto.ChittyChatService_ConnectedClient
 var clLock sync.Mutex
 
 // Channels we need to use, so the client knows when to open and receive broadcasts, so our program dont crash. These needs to be used in a select statement
-var broadCastAllChan = make(chan []*proto.PostMessage)
 
 //NOTE: We need to use goroutines to handle the broadcasts
 //NOTE: We may need to make more rpc methods, for out clients joining and leaving (splitting the broadcast into two methods), as we did before
@@ -84,7 +83,6 @@ func main() {
 			loggedIn = true
 
 		}
-
 		var input string
 
 		fmt.Println("Hi", thisUser.Name, ", please enter what you want to do ")
@@ -103,7 +101,6 @@ func main() {
 		if input == "send" {
 			fmt.Println("Enter your message: ")
 			message, _ := reader.ReadString('\n')
-
 			if !checkMessage(message) {
 				//If the message is invalid, we skip the rest of the loop and wait new input
 				continue
@@ -126,6 +123,7 @@ func main() {
 
 		if input == "log" {
 			for i := range theLog {
+				fmt.Println("test")
 				message := &theLog[i]
 				fmt.Println(message.User.Name, ": ", message.Message, ", ", message.TimeStamp)
 			}
@@ -151,8 +149,13 @@ func GetMessages() {
 	for {
 		GetMessages, _ := BroadcastStream.Recv()
 		if GetMessages != nil {
-			theLog = append(theLog, *GetMessages)
+			fmt.Println("other test")
+			theLog = append(theLog, proto.PostMessage{
+				User:      GetMessages.User,
+				Message:   GetMessages.Message,
+				TimeStamp: GetMessages.GetTimeStamp()})
 			log.Printf("received broadcast messages")
+			log.Printf(GetMessages.GetMessage())
 		}
 	}
 }

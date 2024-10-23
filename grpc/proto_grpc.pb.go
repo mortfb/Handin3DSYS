@@ -32,7 +32,7 @@ func NewChittyChatServiceClient(cc grpc.ClientConnInterface) ChittyChatServiceCl
 
 func (c *chittyChatServiceClient) JoinServer(ctx context.Context, in *JoinRequest, opts ...grpc.CallOption) (*JoinResponse, error) {
 	out := new(JoinResponse)
-	err := c.cc.Invoke(ctx, "/ChittyChatService/joinServer", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/ChittyChatService/JoinServer", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +40,7 @@ func (c *chittyChatServiceClient) JoinServer(ctx context.Context, in *JoinReques
 }
 
 func (c *chittyChatServiceClient) Connected(ctx context.Context, opts ...grpc.CallOption) (ChittyChatService_ConnectedClient, error) {
-	stream, err := c.cc.NewStream(ctx, &ChittyChatService_ServiceDesc.Streams[0], "/ChittyChatService/connected", opts...)
+	stream, err := c.cc.NewStream(ctx, &ChittyChatService_ServiceDesc.Streams[0], "/ChittyChatService/Connected", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func (c *chittyChatServiceClient) Connected(ctx context.Context, opts ...grpc.Ca
 
 type ChittyChatService_ConnectedClient interface {
 	Send(*PostMessage) error
-	Recv() (*PostMessage, error)
+	Recv() (*PostResponse, error)
 	grpc.ClientStream
 }
 
@@ -62,8 +62,8 @@ func (x *chittyChatServiceConnectedClient) Send(m *PostMessage) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *chittyChatServiceConnectedClient) Recv() (*PostMessage, error) {
-	m := new(PostMessage)
+func (x *chittyChatServiceConnectedClient) Recv() (*PostResponse, error) {
+	m := new(PostResponse)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func _ChittyChatService_JoinServer_Handler(srv interface{}, ctx context.Context,
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/ChittyChatService/joinServer",
+		FullMethod: "/ChittyChatService/JoinServer",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ChittyChatServiceServer).JoinServer(ctx, req.(*JoinRequest))
@@ -125,7 +125,7 @@ func _ChittyChatService_Connected_Handler(srv interface{}, stream grpc.ServerStr
 }
 
 type ChittyChatService_ConnectedServer interface {
-	Send(*PostMessage) error
+	Send(*PostResponse) error
 	Recv() (*PostMessage, error)
 	grpc.ServerStream
 }
@@ -134,7 +134,7 @@ type chittyChatServiceConnectedServer struct {
 	grpc.ServerStream
 }
 
-func (x *chittyChatServiceConnectedServer) Send(m *PostMessage) error {
+func (x *chittyChatServiceConnectedServer) Send(m *PostResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
@@ -154,13 +154,13 @@ var ChittyChatService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*ChittyChatServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "joinServer",
+			MethodName: "JoinServer",
 			Handler:    _ChittyChatService_JoinServer_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "connected",
+			StreamName:    "Connected",
 			Handler:       _ChittyChatService_Connected_Handler,
 			ServerStreams: true,
 			ClientStreams: true,

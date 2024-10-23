@@ -35,7 +35,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect: %v", err)
 	}
-	reader := bufio.NewReader(os.Stdin)
+	reader := bufio.NewScanner(os.Stdin)
 	client := proto.NewChittyChatServiceClient(conn)
 
 	if err != nil {
@@ -81,56 +81,37 @@ func main() {
 
 			go GetMessages()
 			loggedIn = true
+			fmt.Println("Hi", thisUser.Name, ", Type anything to write a message")
+			fmt.Println("Here is a list of commands")
+			fmt.Println("Type '/profile' to see your profile")
+			fmt.Println("type '/log' to see the log")
+			fmt.Println("Type '/quit' to quit")
+			fmt.Println("Type '/help' for list of commands")
 
 		}
 		var input string
+		for reader.Scan() {
+			input = reader.Text()
+			break
+		}
 
-		fmt.Println("Hi", thisUser.Name, ", please enter what you want to do ")
-		fmt.Println("type 'help' to list all commands")
-
-		fmt.Scanln(&input)
-
-		if input == "help" {
-			fmt.Println("type 'send' to send a message")
-			fmt.Println("type 'quit' to quit")
-			fmt.Println("type 'profile' to see your profile")
-			fmt.Println("type 'log' to see the log")
+		if input == "/help" {
+			fmt.Println("Here is a list of commands")
+			fmt.Println("Type '/profile' to see your profile")
+			fmt.Println("type '/log' to see the log")
+			fmt.Println("Type '/quit' to quit")
+			fmt.Println("Type '/help' for list of commands")
 			continue
-		}
-
-		if input == "send" {
-			fmt.Println("Enter your message: ")
-			message, _ := reader.ReadString('\n')
-			if !checkMessage(message) {
-				//If the message is invalid, we skip the rest of the loop and wait new input
-				continue
-			} else {
-				actualMessage := thisUser.Name + ": " + message
-				log.Printf("Sending message...")
-				BroadcastStream.Send(&proto.PostMessage{
-					User:      &thisUser,
-					Message:   actualMessage,
-					TimeStamp: int32(lamportTime),
-				})
-
-			}
-		}
-
-		if input == "profile" {
+		} else if input == "/profile" {
 			fmt.Println("Your Profile: ")
 			fmt.Println("Name: ", thisUser.Name)
 			fmt.Println("UserID: ", thisUser.UserID)
-		}
-
-		if input == "log" {
+		} else if input == "/log" {
 			for i := range theLog {
-				fmt.Println("test")
 				message := &theLog[i]
 				fmt.Println(message.User.Name, ": ", message.Message, ", ", message.TimeStamp)
 			}
-		}
-
-		if input == "quit" {
+		} else if input == "/quit" {
 			//Her skal den håndtere broadcasten over at den selv forlader serveren
 			var message = thisUser.Name + " left at Lamport Time: "
 
@@ -142,6 +123,20 @@ func main() {
 
 			log.Printf(thisUser.Name + " logging out")
 			break
+		} else {
+			if !checkMessage(input) {
+				//If the message is invalid, we skip the rest of the loop and wait new input
+				continue
+			} else {
+				actualMessage := thisUser.Name + ": " + input
+				log.Printf("Sending message...")
+				BroadcastStream.Send(&proto.PostMessage{
+					User:      &thisUser,
+					Message:   actualMessage,
+					TimeStamp: int32(lamportTime),
+				})
+
+			}
 		}
 	}
 }

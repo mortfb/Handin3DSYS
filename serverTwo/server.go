@@ -107,8 +107,6 @@ func (server *ChittyChatServiceServer) Connected(stream proto.ChittyChatService_
 					})
 				}
 			}
-		} else {
-			//log.Println("Did not receive any messages")
 		}
 
 	}

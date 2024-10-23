@@ -105,10 +105,11 @@ func main() {
 				//If the message is invalid, we skip the rest of the loop and wait new input
 				continue
 			} else {
+				actualMessage := thisUser.Name + ": " + message
 				log.Printf("Sending message...")
 				BroadcastStream.Send(&proto.PostMessage{
 					User:      &thisUser,
-					Message:   message,
+					Message:   actualMessage,
 					TimeStamp: int32(lamportTime),
 				})
 
@@ -149,12 +150,10 @@ func GetMessages() {
 	for {
 		GetMessages, _ := BroadcastStream.Recv()
 		if GetMessages != nil {
-			fmt.Println("other test")
 			theLog = append(theLog, proto.PostMessage{
 				User:      GetMessages.User,
 				Message:   GetMessages.Message,
 				TimeStamp: GetMessages.GetTimeStamp()})
-			log.Printf("received broadcast messages")
 			log.Printf(GetMessages.GetMessage())
 		}
 	}

@@ -68,11 +68,11 @@ func (server *ChittyChatServiceServer) JoinServer(ctx context.Context, req *prot
 	return response, nil
 }
 
-func sendMessages(stream proto.ChittyChatService_ConnectedServer, server *ChittyChatServiceServer) {
+/*func sendMessages(stream proto.ChittyChatService_ConnectedServer, server *ChittyChatServiceServer) {
 	for {
 		message, err := stream.Recv()
 		if err == nil {
-			log.Printf("Message: %s" + message.Message)
+			log.Printf(message.User.Name + "%s: %s" + message.Message)
 			for i := range server.currentUsers {
 				if i != int(message.User.UserID) { //userID
 					server.currentUsers[i].Send(&proto.PostResponse{
@@ -87,7 +87,7 @@ func sendMessages(stream proto.ChittyChatService_ConnectedServer, server *Chitty
 		}
 
 	}
-}
+}*/
 
 func (server *ChittyChatServiceServer) Connected(stream proto.ChittyChatService_ConnectedServer) error {
 	//Lige nu bruges req ikke til noget, hvad skal den bruges til?
@@ -97,7 +97,7 @@ func (server *ChittyChatServiceServer) Connected(stream proto.ChittyChatService_
 	for {
 		message, err := stream.Recv()
 		if err == nil {
-			log.Println("Message: " + message.Message)
+			log.Printf(message.Message)
 			for i := range server.currentUsers {
 				if i != int(message.User.UserID) { //userID
 					server.currentUsers[i].Send(&proto.PostResponse{

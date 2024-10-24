@@ -15,8 +15,6 @@ type ChittyChatServiceServer struct {
 
 	currentUsers map[int32]proto.ChittyChatService_ConnectedServer
 
-	//msgstorage []proto.PostMessage
-
 	totalAmountUsers int32
 
 	lamportTime int
@@ -71,12 +69,12 @@ func (server *ChittyChatServiceServer) JoinServer(req *proto.JoinRequest, stream
 	log.Println("broadcasted join message")
 
 	var message string = "New user joined: " + req.User.Name
-	server.BroadcastMessage(message)
+	server.BroadcastMessage(message, req.User)
 
 	joinResponse := &proto.JoinResponse{
 		UserID:    tmp,
 		TimeStamp: int32(server.lamportTime),
-		Message:   "Welcome " + req.User.Name,
+		Message:   "Welcome to the server" + req.User.Name,
 	}
 
 	stream.Send(joinResponse)
@@ -84,13 +82,15 @@ func (server *ChittyChatServiceServer) JoinServer(req *proto.JoinRequest, stream
 	return nil
 }
 
-func (server *ChittyChatServiceServer) BroadcastMessage(message string) error {
-	for _, user := range server.currentUsers {
-		if user != nil {
-			user.Send(&proto.PostMessage{
-				Message:   message,
-				TimeStamp: int32(server.lamportTime),
-			})
+func (server *ChittyChatServiceServer) BroadcastMessage(message string, client *proto.User) error {
+	for i, user := range server.currentUsers {
+		if i != client.UserID {
+			if user != nil {
+				user.Send(&proto.PostMessage{
+					Message:   message,
+					TimeStamp: int32(server.lamportTime),
+				})
+			}
 		}
 	}
 	return nil
@@ -107,7 +107,7 @@ func (server *ChittyChatServiceServer) LeaveServer(req *proto.LeaveRequest, stre
 	})
 
 	var message string = "User left: " + req.User.Name
-	server.BroadcastMessage(message)
+	server.BroadcastMessage(message, req.User)
 
 	return nil
 }
@@ -117,17 +117,16 @@ func (server *ChittyChatServiceServer) Connected(stream proto.ChittyChatService_
 	//Shoud send the messages to the different users
 	for {
 		message, err := stream.Recv()
-		server.lamportTime = compareLamportTime(int(message.TimeStamp), server.lamportTime)
-		server.currentUsers[message.User.UserID] = stream
+		if err == nil {
+			server.lamportTime = compareLamportTime(int(message.TimeStamp), server.lamportTime)
+			server.currentUsers[message.User.UserID] = stream
 
-		var BroadcastMessage string = message.User.Name + ": " + message.Message + " at time: " + string(server.lamportTime)
-		log.Println(BroadcastMessage)
+			var BroadcastMessage string = message.User.Name + ": " + message.Message + " at time: " + string(server.lamportTime)
+			log.Println(BroadcastMessage)
 
-		if err != nil {
-			log.Fatalf("failed to recieve message")
+			server.BroadcastMessage(BroadcastMessage, message.User)
 		}
 
-		server.BroadcastMessage(BroadcastMessage)
 	}
 
 }

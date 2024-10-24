@@ -127,9 +127,14 @@ func main() {
 		}
 
 		if input == "log" {
-			for i := range theLog {
-				message := &theLog[i]
-				fmt.Println(message.User.Name, ": ", message.Message, ", ", message.TimeStamp)
+			if len(theLog) == 0 {
+				fmt.Println("No messages in log")
+			} else {
+				clLock.Lock()
+				for i := range theLog {
+					fmt.Println(theLog[i].User.Name, ": ", theLog[i].Message, ", ", theLog[i].TimeStamp)
+				}
+				clLock.Unlock()
 			}
 		}
 
@@ -150,24 +155,20 @@ func main() {
 			break
 		}
 
-		logMessages()
 	}
 }
 
 func GetMessages() {
 	for {
-		GetMessages, _ := BroadcastStream.Recv()
-		if GetMessages != nil {
-			theLog = append(theLog, *GetMessages)
+		GetMessages, err := BroadcastStream.Recv()
+		if err != nil {
+			log.Printf("Failed to receive broadcast messages: %v", err)
+		} else {
+			clLock.Lock()
+			fmt.Println(GetMessages.Message, ", ", GetMessages.TimeStamp)
+			clLock.Unlock()
 			log.Printf("received broadcast messages")
 		}
-	}
-}
-
-func logMessages() {
-	for i := range theLog {
-		message := &theLog[i]
-		log.Println(message.User.Name, ": ", message.Message, ", ", message.TimeStamp)
 	}
 }
 

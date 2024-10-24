@@ -17,7 +17,7 @@ Now the client is a part of the server. A list of commands will be provided in t
 If you just want to send a message type anything you want in the terminal and press enter.
 Now the message will be send to the server distributed to all currently active clients.
 
-In the terminal you will recieve messages for when people join, leave or see the message that they just send. This happens automatically.
+In the terminal you will recieve messages for when people join, leave or see the message that they just send. This happens automatically as the server recieves information from clients.
 
 Once you are done, use the aformentioned /quit command to leave and terminate the operation.
 

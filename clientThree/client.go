@@ -21,6 +21,7 @@ var thisUser proto.User
 var BroadcastStream proto.ChittyChatService_CommunicateClient
 
 var clLock sync.Mutex
+var stop bool
 
 //NOTE: We need to use goroutines to handle the broadcasts
 //NOTE: We may need to make more rpc methods, for out clients joining and leaving (splitting the broadcast into two methods), as we did before
@@ -47,7 +48,13 @@ func main() {
 			fmt.Println("Enter your name: ")
 			var name string
 
+			lamportTime++
+
 			fmt.Scanln(&name)
+			/*for reader.Scan() {
+				name = reader.Text()
+				break
+			}*/
 
 			thisUser = proto.User{
 				Name:   name,
@@ -59,23 +66,22 @@ func main() {
 				User:      &thisUser,
 				TimeStamp: int32(lamportTime),
 			})
-			if err != nil {
-				log.Fatalf("Failed to join server: %v", err)
-			}
 
 			if err != nil {
 				log.Fatalf("Failed to join server: %v", err)
+				lamportTime++
 			} else {
 				log.Println(joinResponse.Message)
+				lamportTime++
 			}
 
 			thisUser.UserID = joinResponse.UserID
 
+			lamportTime++
 			BroadcastStream, _ = client.Communicate(context.Background())
 
 			go GetMessages()
 			loggedIn = true
-
 			fmt.Println("Hi", thisUser.Name, ", Type anything to write a message")
 			fmt.Println("Here is a list of commands")
 			fmt.Println("Type '/profile' to see your profile")
@@ -92,6 +98,7 @@ func main() {
 		}
 
 		if input == "/help" {
+			lamportTime++
 			fmt.Println("Here is a list of commands")
 			fmt.Println("Type '/profile' to see your profile")
 			fmt.Println("type '/log' to see the log")
@@ -99,10 +106,12 @@ func main() {
 			fmt.Println("Type '/help' for list of commands")
 			continue
 		} else if input == "/profile" {
+			lamportTime++
 			fmt.Println("Your Profile: ")
 			fmt.Println("Name: ", thisUser.Name)
 			fmt.Println("UserID: ", thisUser.UserID)
 		} else if input == "/quit" {
+			lamportTime++
 			LeaveResponse, err := client.LeaveServer(context.Background(), &proto.LeaveRequest{
 				User:      &thisUser,
 				TimeStamp: int32(lamportTime),
@@ -110,6 +119,7 @@ func main() {
 
 			if err != nil {
 				log.Fatalf("Failed to leave server: %v", err)
+				lamportTime++
 			}
 
 			log.Printf(LeaveResponse.Message)
@@ -119,6 +129,7 @@ func main() {
 				//If the message is invalid, we skip the rest of the loop and wait new input
 				continue
 			} else {
+				lamportTime++
 				actualMessage := thisUser.Name + ": " + input
 				log.Printf("Sending message...")
 				BroadcastStream.Send(&proto.PostMessage{
@@ -133,13 +144,18 @@ func main() {
 }
 
 func GetMessages() {
-	for {
+	var stop bool = true
+	for stop {
 		GetMessages, err := BroadcastStream.Recv()
 		if err != nil {
-			log.Printf("Failed to receive broadcast messages: %v", err)
+			//log.Printf("Failed to receive broadcast messages: %v", err)
+			lamportTime++
+			stop = false
+			log.Fatal(err)
 		} else {
 			clLock.Lock()
-			log.Println(GetMessages.Message, ", ", GetMessages.TimeStamp)
+			log.Printf(GetMessages.Message)
+			lamportTime++
 			clLock.Unlock()
 			//log.Printf("received broadcast messages")
 		}
@@ -149,13 +165,16 @@ func GetMessages() {
 func checkMessage(message string) bool {
 	if !utf8.ValidString(message) {
 		log.Printf("Messages must be valid in utf8")
+		lamportTime++
 		return false
 	} else if len(message) > 128 {
 		log.Printf("Messages cant be longer than 128 characters")
+		lamportTime++
 		return false
 
 	} else if len(message) == 0 {
 		log.Printf("Message must not be empty")
+		lamportTime++
 		return false
 
 	} else {

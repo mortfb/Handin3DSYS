@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	proto "Handin3DSYS/grpc"
 	"context"
 	"log"
@@ -30,6 +32,7 @@ func main() {
 	}
 
 	log.Printf("Server started")
+
 	grpcServer := grpc.NewServer()
 	listener, err := net.Listen("tcp", ":5050")
 	if err != nil {
@@ -53,34 +56,45 @@ func (server *ChittyChatServiceServer) JoinServer(ctx context.Context, req *prot
 	server.totalAmountUsers++
 	srLock.Unlock()
 
-	log.Println("User joined: " + req.User.Name)
-
-	server.lamportTime++
-
+	srLock.Lock()
+	server.lamportTime = compareLamportTime(server.lamportTime, int(req.TimeStamp))
+	srLock.Unlock()
+	
+	log.Printf(req.User.Name + " joined at: " + fmt.Sprint(server.lamportTime))
 	server.currentUsers[tmp] = nil
 
-	log.Println("broadcasted join message")
+	log.Printf("broadcasted join message")
+	srLock.Lock()
+	server.lamportTime = compareLamportTime(server.lamportTime, int(req.TimeStamp))
+	srLock.Unlock()
 
-	var message string = "User " + req.User.Name + " joined the chat at: " + string(server.lamportTime)
-	server.BroadcastMessage(message, req.User)
+	var msg string = req.User.Name + " joined the chat at: " + fmt.Sprint(server.lamportTime)
+
+	var message := &proto.PostMessage{
+		User: req.User,
+		Message: msg
+		TimeStamp: int32(server.lamportTime) 
+	}
+
+	server.BroadcastMessage(message)
 
 	joinResponse := &proto.JoinResponse{
 		UserID:    tmp,
 		TimeStamp: int32(server.lamportTime),
-		Message:   "Welcome to the server" + req.User.Name,
+		Message:   "Welcome to the server " + req.User.Name,
 	}
 
 	return joinResponse, nil
 }
 
-func (server *ChittyChatServiceServer) BroadcastMessage(message string, client *proto.User) error {
+func (server *ChittyChatServiceServer) BroadcastMessage(message *proto.PostMessage) error {
 	for i, user := range server.currentUsers {
-		if i != client.UserID {
+		if i != message.User.UserID {
 			if user != nil {
-				user.Send(&proto.PostMessage{
-					Message:   message,
-					TimeStamp: int32(server.lamportTime),
-				})
+				srLock.Lock()
+				server.lamportTime = compareLamportTime(server.lamportTime, int(message.TimeStamp))
+				srLock.Unlock()
+				user.Send(message)
 			}
 		}
 	}
@@ -92,15 +106,26 @@ func (server *ChittyChatServiceServer) LeaveServer(ctx context.Context, req *pro
 	delete(server.currentUsers, req.User.UserID)
 	srLock.Unlock()
 
-	log.Println("User left: " + req.User.Name)
+	srLock.Lock()
+	server.lamportTime = compareLamportTime(server.lamportTime, int(req.TimeStamp))
+	srLock.Unlock()
+	log.Printf(req.User.Name + " left at: " + fmt.Sprint(server.lamportTime))
 
 	leaveResponse := &proto.LeaveResponse{
 		Message:   "Goodbye " + req.User.Name + ", we hope to see you again soon!",
 		TimeStamp: int32(server.lamportTime),
 	}
 
-	var message string = "User left: " + req.User.Name
-	server.BroadcastMessage(message, req.User)
+	
+	var msg string = req.User.Name + " left the chat at: " + fmt.Sprint(server.lamportTime)
+	var message := &proto.PostMessage{
+		User: req.User,
+		Message: msg,
+		TimeStamp: int32(server.lamportTime)
+	}
+
+	server.BroadcastMessage(message)
+	server.lamportTime = compareLamportTime(server.lamportTime, int(req.TimeStamp))
 
 	return leaveResponse, nil
 }
@@ -111,13 +136,22 @@ func (server *ChittyChatServiceServer) Communicate(stream proto.ChittyChatServic
 	for {
 		message, err := stream.Recv()
 		if err == nil {
+			srLock.Lock()
 			server.lamportTime = compareLamportTime(int(message.TimeStamp), server.lamportTime)
+			srLock.Unlock()
 			server.currentUsers[message.User.UserID] = stream
+			var msg string = message.Message + " ----- sends at: " + fmt.Sprint(server.lamportTime)
+			
+			var BroadcastMessage := &proto.PostMessage{
+				Message: msg,
+				User: message.User,
+				TimeStamp: server.lamportTime,
 
-			var BroadcastMessage string = message.User.Name + ": " + message.Message + " at time: " + string(server.lamportTime)
-			log.Println(BroadcastMessage)
+			} 
+			
+			log.Printf(BroadcastMessage)
 
-			server.BroadcastMessage(BroadcastMessage, message.User)
+			server.BroadcastMessage(BroadcastMessage)
 		}
 
 	}

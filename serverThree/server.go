@@ -2,7 +2,7 @@ package main
 
 import (
 	proto "Handin3DSYS/grpc"
-	"fmt"
+	"context"
 	"log"
 	"net"
 	"sync"
@@ -13,7 +13,7 @@ import (
 type ChittyChatServiceServer struct {
 	proto.UnimplementedChittyChatServiceServer
 
-	currentUsers map[int32]proto.ChittyChatService_ConnectedServer
+	currentUsers map[int32]proto.ChittyChatService_CommunicateServer
 
 	totalAmountUsers int32
 
@@ -24,7 +24,7 @@ var srLock sync.Mutex
 
 func main() {
 	server := &ChittyChatServiceServer{
-		currentUsers:     make(map[int32]proto.ChittyChatService_ConnectedServer),
+		currentUsers:     make(map[int32]proto.ChittyChatService_CommunicateServer),
 		totalAmountUsers: 0,
 		lamportTime:      0,
 	}
@@ -46,7 +46,7 @@ func main() {
 
 }
 
-func (server *ChittyChatServiceServer) JoinServer(req *proto.JoinRequest, stream proto.ChittyChatService_JoinServerServer) error {
+func (server *ChittyChatServiceServer) JoinServer(ctx context.Context, req *proto.JoinRequest) (*proto.JoinResponse, error) {
 	srLock.Lock()
 	var tmp = server.totalAmountUsers
 	req.User.UserID = tmp
@@ -55,20 +55,13 @@ func (server *ChittyChatServiceServer) JoinServer(req *proto.JoinRequest, stream
 
 	log.Println("User joined: " + req.User.Name)
 
-	server.currentUsers[tmp] = nil
+	server.lamportTime++
 
-	for _, user := range server.currentUsers {
-		if user != nil {
-			user.Send(&proto.PostMessage{
-				Message:   fmt.Sprintf("User %s has joined the chat", req.User.Name),
-				TimeStamp: int32(server.lamportTime),
-			})
-		}
-	}
+	server.currentUsers[tmp] = nil
 
 	log.Println("broadcasted join message")
 
-	var message string = "New user joined: " + req.User.Name
+	var message string = "User " + req.User.Name + " joined the chat at: " + string(server.lamportTime)
 	server.BroadcastMessage(message, req.User)
 
 	joinResponse := &proto.JoinResponse{
@@ -77,9 +70,7 @@ func (server *ChittyChatServiceServer) JoinServer(req *proto.JoinRequest, stream
 		Message:   "Welcome to the server" + req.User.Name,
 	}
 
-	stream.Send(joinResponse)
-
-	return nil
+	return joinResponse, nil
 }
 
 func (server *ChittyChatServiceServer) BroadcastMessage(message string, client *proto.User) error {
@@ -96,23 +87,25 @@ func (server *ChittyChatServiceServer) BroadcastMessage(message string, client *
 	return nil
 }
 
-func (server *ChittyChatServiceServer) LeaveServer(req *proto.LeaveRequest, stream proto.ChittyChatService_LeaveServerServer) error {
+func (server *ChittyChatServiceServer) LeaveServer(ctx context.Context, req *proto.LeaveRequest) (*proto.LeaveResponse, error) {
 	srLock.Lock()
 	delete(server.currentUsers, req.User.UserID)
 	srLock.Unlock()
 
-	stream.Send(&proto.LeaveResponse{
+	log.Println("User left: " + req.User.Name)
+
+	leaveResponse := &proto.LeaveResponse{
 		Message:   "Goodbye " + req.User.Name + ", we hope to see you again soon!",
 		TimeStamp: int32(server.lamportTime),
-	})
+	}
 
 	var message string = "User left: " + req.User.Name
 	server.BroadcastMessage(message, req.User)
 
-	return nil
+	return leaveResponse, nil
 }
 
-func (server *ChittyChatServiceServer) Connected(stream proto.ChittyChatService_ConnectedServer) error {
+func (server *ChittyChatServiceServer) Communicate(stream proto.ChittyChatService_CommunicateServer) error {
 
 	//Shoud send the messages to the different users
 	for {

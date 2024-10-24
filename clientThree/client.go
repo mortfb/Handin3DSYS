@@ -14,13 +14,11 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-var theLog = []proto.PostMessage{}
-
 var lamportTime int = 0
 
 var thisUser proto.User
 
-var BroadcastStream proto.ChittyChatService_ConnectedClient
+var BroadcastStream proto.ChittyChatService_CommunicateClient
 
 var clLock sync.Mutex
 
@@ -33,7 +31,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect: %v", err)
 	}
-	reader := bufio.NewReader(os.Stdin)
+	reader := bufio.NewScanner(os.Stdin)
 	client := proto.NewChittyChatServiceClient(conn)
 
 	if err != nil {
@@ -64,82 +62,47 @@ func main() {
 			if err != nil {
 				log.Fatalf("Failed to join server: %v", err)
 			}
-			jointmp, err := joinResponse.Recv()
 
 			if err != nil {
 				log.Fatalf("Failed to join server: %v", err)
 			} else {
-				log.Println(jointmp.Message)
+				log.Println(joinResponse.Message)
 			}
 
-			thisUser.UserID = jointmp.UserID
-			//var message = thisUser.Name + " joined at Lamport Time: " + string(lamportTime)
-			BroadcastStream, _ = client.Connected(context.Background())
-			/*BroadcastStream.Send(&proto.PostMessage{
-				User:      &thisUser,
-				Message:   message,
-				TimeStamp: int32(lamportTime),
-			})
-			*/
+			thisUser.UserID = joinResponse.UserID
+
+			BroadcastStream, _ = client.Communicate(context.Background())
+
 			go GetMessages()
 			loggedIn = true
 
+			fmt.Println("Hi", thisUser.Name, ", Type anything to write a message")
+			fmt.Println("Here is a list of commands")
+			fmt.Println("Type '/profile' to see your profile")
+			fmt.Println("type '/log' to see the log")
+			fmt.Println("Type '/quit' to quit")
+			fmt.Println("Type '/help' for list of commands")
 		}
 
 		var input string
 
-		fmt.Println("")
-		fmt.Println("Hi", thisUser.Name, ", please enter what you want to do ")
-		fmt.Println("type 'help' to list all commands")
+		for reader.Scan() {
+			input = reader.Text()
+			break
+		}
 
-		fmt.Scanln(&input)
-
-		if input == "help" {
-			fmt.Println("type 'send' to send a message")
-			fmt.Println("type 'quit' to quit")
-			fmt.Println("type 'profile' to see your profile")
-			fmt.Println("type 'log' to see the log")
+		if input == "/help" {
+			fmt.Println("Here is a list of commands")
+			fmt.Println("Type '/profile' to see your profile")
+			fmt.Println("type '/log' to see the log")
+			fmt.Println("Type '/quit' to quit")
+			fmt.Println("Type '/help' for list of commands")
 			continue
-		}
-
-		if input == "send" {
-			fmt.Println("Enter your message: ")
-			message, _ := reader.ReadString('\n')
-
-			if !checkMessage(message) {
-				//If the message is invalid, we skip the rest of the loop and wait new input
-				continue
-			} else {
-				log.Printf("Sending message...")
-				BroadcastStream.Send(&proto.PostMessage{
-					User:      &thisUser,
-					Message:   message,
-					TimeStamp: int32(lamportTime),
-				})
-
-			}
-		}
-
-		if input == "profile" {
+		} else if input == "/profile" {
 			fmt.Println("Your Profile: ")
 			fmt.Println("Name: ", thisUser.Name)
 			fmt.Println("UserID: ", thisUser.UserID)
-		}
-
-		if input == "log" {
-			if len(theLog) == 0 {
-				fmt.Println("No messages in log")
-			} else {
-				clLock.Lock()
-				for i := range theLog {
-					fmt.Println(theLog[i].User.Name, ": ", theLog[i].Message, ", ", theLog[i].TimeStamp)
-				}
-				clLock.Unlock()
-			}
-		}
-
-		if input == "quit" {
-			//Her skal den håndtere broadcasten over at den selv forlader serveren
+		} else if input == "/quit" {
 			LeaveResponse, err := client.LeaveServer(context.Background(), &proto.LeaveRequest{
 				User:      &thisUser,
 				TimeStamp: int32(lamportTime),
@@ -149,12 +112,23 @@ func main() {
 				log.Fatalf("Failed to leave server: %v", err)
 			}
 
-			leaveMessage, _ := LeaveResponse.Recv()
-
-			log.Printf(leaveMessage.Message)
+			log.Printf(LeaveResponse.Message)
 			break
-		}
+		} else {
+			if !checkMessage(input) {
+				//If the message is invalid, we skip the rest of the loop and wait new input
+				continue
+			} else {
+				actualMessage := thisUser.Name + ": " + input
+				log.Printf("Sending message...")
+				BroadcastStream.Send(&proto.PostMessage{
+					User:      &thisUser,
+					Message:   actualMessage,
+					TimeStamp: int32(lamportTime),
+				})
 
+			}
+		}
 	}
 }
 
@@ -165,9 +139,9 @@ func GetMessages() {
 			log.Printf("Failed to receive broadcast messages: %v", err)
 		} else {
 			clLock.Lock()
-			fmt.Println(GetMessages.Message, ", ", GetMessages.TimeStamp)
+			log.Println(GetMessages.Message, ", ", GetMessages.TimeStamp)
 			clLock.Unlock()
-			log.Printf("received broadcast messages")
+			//log.Printf("received broadcast messages")
 		}
 	}
 }

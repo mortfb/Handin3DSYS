@@ -47,6 +47,7 @@ func main() {
 			fmt.Println("Enter your name: ")
 			var name string
 
+			//Name counts as event
 			clLock.Lock()
 			lamportTime++
 			clLock.Unlock()
@@ -62,10 +63,11 @@ func main() {
 				UserID: 1,
 			}
 
+			//Joining the server
 			clLock.Lock()
 			lamportTime++
 			clLock.Unlock()
-			log.Println("Attempting to join server...")
+			log.Printf("Attemting to connect to server at Lamport time: %d", lamportTime)
 			joinResponse, err := client.JoinServer(context.Background(), &proto.JoinRequest{
 				User:      &thisUser,
 				TimeStamp: int32(lamportTime),
@@ -77,15 +79,17 @@ func main() {
 				lamportTime++
 				clLock.Unlock()
 			} else {
-				lamportTime = compareLamportTime(lamportTime, int(joinResponse.TimeStamp))
+				//Getting response from server
+				lamportTime = compareLamportTime(int(joinResponse.TimeStamp))
 				log.Println(joinResponse.Message)
+				thisUser.UserID = joinResponse.UserID
 			}
-
-			thisUser.UserID = joinResponse.UserID
 
 			clLock.Lock()
 			lamportTime++
 			clLock.Unlock()
+
+			log.Printf("Starting to communicate with server... %d", lamportTime)
 			BroadcastStream, _ = client.Communicate(context.Background())
 
 			go GetMessages()
@@ -136,7 +140,7 @@ func main() {
 			})
 
 			clLock.Lock()
-			lamportTime = compareLamportTime(lamportTime, int(LeaveResponse.TimeStamp))
+			lamportTime = compareLamportTime(int(LeaveResponse.TimeStamp))
 			clLock.Unlock()
 
 			if err != nil {
@@ -155,8 +159,7 @@ func main() {
 				//If the message is invalid, we skip the rest of the loop and wait new input
 				continue
 			} else {
-				clLock.Lock()
-				lamportTime = compareLamportTime(lamportTime, 0)
+				lamportTime++
 				actualMessage := thisUser.Name + ": " + input
 				log.Printf("Sending message...")
 				BroadcastStream.Send(&proto.PostMessage{
@@ -164,8 +167,6 @@ func main() {
 					Message:   actualMessage,
 					TimeStamp: int32(lamportTime),
 				})
-				clLock.Unlock()
-
 			}
 		}
 	}
@@ -176,18 +177,13 @@ func GetMessages() {
 	for stop {
 		GetMessages, err := BroadcastStream.Recv()
 		if err != nil {
-			//log.Printf("Failed to receive broadcast messages: %v", err)
-			clLock.Lock()
+			log.Printf("Server has shut down: %v", err)
 			lamportTime++
-			clLock.Unlock()
 			stop = false
 			log.Fatal(err)
 		} else {
-			clLock.Lock()
-			lamportTime = compareLamportTime(lamportTime, int(GetMessages.TimeStamp))
-			clLock.Unlock()
+			lamportTime = compareLamportTime(int(GetMessages.TimeStamp))
 			log.Printf(GetMessages.Message + fmt.Sprint(lamportTime))
-			//log.Printf("received broadcast messages")
 		}
 	}
 }
@@ -201,22 +197,21 @@ func checkMessage(message string) bool {
 		log.Printf("Messages cant be longer than 128 characters")
 		lamportTime++
 		return false
-
 	} else if len(message) == 0 {
 		log.Printf("Message must not be empty")
 		lamportTime++
 		return false
-
 	} else {
 		return true
 	}
 }
 
-func compareLamportTime(lamportTime int, messageLamportTime int) int {
-	if lamportTime > messageLamportTime {
+func compareLamportTime(otherLamportTime int) int {
+	if lamportTime > otherLamportTime {
 		return lamportTime + 1
+	} else if otherLamportTime > lamportTime {
+		return otherLamportTime + 1
 	} else {
-		lamportTime = messageLamportTime
 		return lamportTime + 1
 	}
 }

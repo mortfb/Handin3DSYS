@@ -18,17 +18,15 @@ type ChittyChatServiceServer struct {
 	currentUsers map[int32]proto.ChittyChatService_CommunicateServer
 
 	totalAmountUsers int32
-
-	lamportTime int
 }
 
 var srLock sync.Mutex
+var lamportTime int = 0
 
 func main() {
 	server := &ChittyChatServiceServer{
 		currentUsers:     make(map[int32]proto.ChittyChatService_CommunicateServer),
 		totalAmountUsers: 0,
-		lamportTime:      0,
 	}
 
 	log.Printf("Server started")
@@ -54,14 +52,13 @@ func (server *ChittyChatServiceServer) JoinServer(ctx context.Context, req *prot
 	var tmp = server.totalAmountUsers
 	req.User.UserID = tmp
 	server.totalAmountUsers++
-	srLock.Unlock()
 
-	srLock.Lock()
-	server.lamportTime = compareLamportTime(server.lamportTime, int(req.TimeStamp))
-	srLock.Unlock()
-
-	log.Printf(req.User.Name + " joined at Lamport Time: " + fmt.Sprint(server.lamportTime))
 	server.currentUsers[tmp] = nil
+	fmt.Print(req.User.Name + string(req.TimeStamp))
+	lamportTime = compareLamportTime(int(req.TimeStamp))
+	srLock.Unlock()
+
+	log.Printf(req.User.Name + " joined at Lamport Time: " + fmt.Sprint(lamportTime))
 
 	log.Printf("broadcasted join message")
 	var msg string = req.User.Name + " joined the chat at Lamport Time: "
@@ -69,36 +66,36 @@ func (server *ChittyChatServiceServer) JoinServer(ctx context.Context, req *prot
 	message := &proto.PostMessage{
 		User:      req.User,
 		Message:   msg,
-		TimeStamp: int32(server.lamportTime),
+		TimeStamp: int32(lamportTime),
 	}
 
 	server.BroadcastMessage(message)
 
 	srLock.Lock()
-	server.lamportTime = compareLamportTime(server.lamportTime, int(req.TimeStamp))
+	//Dont need to compare lamport time here
+	lamportTime++
 	srLock.Unlock()
 
 	joinResponse := &proto.JoinResponse{
 		UserID:    tmp,
-		TimeStamp: int32(server.lamportTime),
+		TimeStamp: int32(lamportTime),
 		Message:   "Welcome to the server " + req.User.Name,
 	}
 
 	return joinResponse, nil
 }
 
-func (server *ChittyChatServiceServer) BroadcastMessage(message *proto.PostMessage) error {
+func (server *ChittyChatServiceServer) BroadcastMessage(message *proto.PostMessage) {
+	srLock.Lock()
+	defer srLock.Unlock()
 	for i, user := range server.currentUsers {
 		if i != message.User.UserID {
-			if user != nil {
-				srLock.Lock()
-				server.lamportTime = compareLamportTime(server.lamportTime, int(message.TimeStamp))
-				srLock.Unlock()
-				user.Send(message)
-			}
+			//if user != nil {
+			lamportTime++
+			user.Send(message)
+			//}
 		}
 	}
-	return nil
 }
 
 func (server *ChittyChatServiceServer) LeaveServer(ctx context.Context, req *proto.LeaveRequest) (*proto.LeaveResponse, error) {
@@ -107,24 +104,24 @@ func (server *ChittyChatServiceServer) LeaveServer(ctx context.Context, req *pro
 	srLock.Unlock()
 
 	srLock.Lock()
-	server.lamportTime = compareLamportTime(server.lamportTime, int(req.TimeStamp))
+	lamportTime = compareLamportTime(int(req.TimeStamp))
 	srLock.Unlock()
-	log.Printf(req.User.Name + " left at Lamport Time: " + fmt.Sprint(server.lamportTime))
+	log.Printf(req.User.Name + " left at Lamport Time: " + fmt.Sprint(lamportTime))
 
 	leaveResponse := &proto.LeaveResponse{
 		Message:   "Goodbye " + req.User.Name + ", we hope to see you again soon!",
-		TimeStamp: int32(server.lamportTime),
+		TimeStamp: int32(lamportTime),
 	}
 
 	var msg string = req.User.Name + " left the chat at Lamport Time: "
 	message := &proto.PostMessage{
 		User:      req.User,
 		Message:   msg,
-		TimeStamp: int32(server.lamportTime),
+		TimeStamp: int32(lamportTime),
 	}
 
 	server.BroadcastMessage(message)
-	server.lamportTime = compareLamportTime(server.lamportTime, int(req.TimeStamp))
+	lamportTime = compareLamportTime(int(req.TimeStamp))
 
 	return leaveResponse, nil
 }
@@ -134,35 +131,40 @@ func (server *ChittyChatServiceServer) Communicate(stream proto.ChittyChatServic
 	server.currentUsers[int32(server.totalAmountUsers-1)] = stream
 	srLock.Unlock()
 
-	//Shoud send the messages to the different users
+	log.Printf("User connected")
+	//Should send the messages to the different users
 	for {
 		message, err := stream.Recv()
-		if err == nil {
-			srLock.Lock()
-			server.lamportTime = compareLamportTime(int(message.TimeStamp), server.lamportTime)
-			srLock.Unlock()
-			var msg string = message.Message + " ----- sends at Lamport Time: " //+ fmt.Sprint(server.lamportTime)
+		srLock.Lock()
+		lamportTime = compareLamportTime(int(message.TimeStamp))
+		srLock.Unlock()
+
+		if err != nil {
+			log.Printf("User disconnected")
+
+		} else {
+			var msg string = message.Message + " ----- sent at Lamport Time: " //+ fmt.Sprint(server.lamportTime)
 
 			BroadcastMessage := &proto.PostMessage{
 				Message:   msg,
 				User:      message.User,
-				TimeStamp: int32(server.lamportTime),
+				TimeStamp: int32(lamportTime),
 			}
-
-			log.Printf(BroadcastMessage.Message + fmt.Sprint(server.lamportTime))
-
 			server.BroadcastMessage(BroadcastMessage)
+
+			log.Printf(BroadcastMessage.Message + fmt.Sprint(lamportTime))
 		}
 
 	}
 
 }
 
-func compareLamportTime(lamportTime int, messageLamportTime int) int {
-	if lamportTime > messageLamportTime {
+func compareLamportTime(otherLamportTime int) int {
+	if lamportTime > otherLamportTime {
 		return lamportTime + 1
+	} else if otherLamportTime > lamportTime {
+		return otherLamportTime + 1
 	} else {
-		lamportTime = messageLamportTime
 		return lamportTime + 1
 	}
 }

@@ -81,7 +81,8 @@ func main() {
 			} else {
 				//Getting response from server
 				lamportTime = compareLamportTime(int(joinResponse.TimeStamp))
-				log.Println(joinResponse.Message)
+				lamportTime++
+				log.Println(joinResponse.Message, lamportTime)
 				thisUser.UserID = joinResponse.UserID
 			}
 
@@ -141,6 +142,7 @@ func main() {
 
 			clLock.Lock()
 			lamportTime = compareLamportTime(int(LeaveResponse.TimeStamp))
+			lamportTime++
 			clLock.Unlock()
 
 			if err != nil {
@@ -151,6 +153,7 @@ func main() {
 			}
 
 			log.Printf(LeaveResponse.Message)
+
 			break
 		} else if input == "/lt" {
 			log.Printf("Lamport Time: %v", lamportTime)
@@ -161,7 +164,7 @@ func main() {
 			} else {
 				lamportTime++
 				actualMessage := thisUser.Name + ": " + input
-				log.Printf("Sending message...")
+				log.Printf("Sending message at Lamport Time: %d", lamportTime)
 				BroadcastStream.Send(&proto.PostMessage{
 					User:      &thisUser,
 					Message:   actualMessage,
@@ -175,16 +178,22 @@ func main() {
 func GetMessages() {
 	var stop bool = true
 	for stop {
+		clLock.Lock()
+		log.Printf("Client TimeStamp before recieved message: %d", lamportTime)
+		clLock.Unlock()
 		GetMessages, err := BroadcastStream.Recv()
 		if err != nil {
 			log.Printf("Server has shut down: %v", err)
 			lamportTime++
 			stop = false
 			log.Fatal(err)
-		} else {
-			lamportTime = compareLamportTime(int(GetMessages.TimeStamp))
-			log.Printf(GetMessages.Message + fmt.Sprint(lamportTime))
 		}
+		clLock.Lock()
+		lamportTime = compareLamportTime(int(GetMessages.TimeStamp))
+		lamportTime++
+		clLock.Unlock()
+		log.Printf("Client TimeStamp after recieved message: %d", lamportTime)
+		log.Printf(GetMessages.Message + fmt.Sprint(lamportTime))
 	}
 }
 
@@ -208,10 +217,10 @@ func checkMessage(message string) bool {
 
 func compareLamportTime(otherLamportTime int) int {
 	if lamportTime > otherLamportTime {
-		return lamportTime + 1
+		return lamportTime
 	} else if otherLamportTime > lamportTime {
-		return otherLamportTime + 1
+		return otherLamportTime
 	} else {
-		return lamportTime + 1
+		return lamportTime
 	}
 }

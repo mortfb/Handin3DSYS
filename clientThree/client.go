@@ -134,7 +134,7 @@ func main() {
 			lamportTime++
 			clLock.Unlock()
 
-			log.Printf("Leaving server...")
+			log.Printf("Leaving server... at: %d", lamportTime)
 			LeaveResponse, err := client.LeaveServer(context.Background(), &proto.LeaveRequest{
 				User:      &thisUser,
 				TimeStamp: int32(lamportTime),
@@ -153,6 +153,7 @@ func main() {
 			}
 
 			log.Printf(LeaveResponse.Message)
+			log.Printf("Left server at Lamport Time: %d", lamportTime)
 
 			break
 		} else if input == "/lt" {

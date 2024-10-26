@@ -122,11 +122,6 @@ func (server *ChittyChatServiceServer) LeaveServer(ctx context.Context, req *pro
 	srLock.Unlock()
 	log.Printf(req.User.Name + " left at Lamport Time: " + fmt.Sprint(lamportTime))
 
-	leaveResponse := &proto.LeaveResponse{
-		Message:   "Goodbye " + req.User.Name + ", we hope to see you again soon!",
-		TimeStamp: int32(lamportTime),
-	}
-
 	var msg string = req.User.Name + " left the chat at Lamport Time: "
 
 	srLock.Lock()
@@ -146,6 +141,11 @@ func (server *ChittyChatServiceServer) LeaveServer(ctx context.Context, req *pro
 
 	lamportTime = compareLamportTime(int(req.TimeStamp))
 	lamportTime++
+
+	leaveResponse := &proto.LeaveResponse{
+		Message:   "Goodbye " + req.User.Name + ", we hope to see you again soon!",
+		TimeStamp: int32(lamportTime),
+	}
 
 	return leaveResponse, nil
 }
@@ -175,19 +175,17 @@ func (server *ChittyChatServiceServer) Communicate(stream proto.ChittyChatServic
 				var msg string = message.Message + " ----- server received at Lamport Time: " //+ fmt.Sprint(server.lamportTime)
 				log.Printf(msg + fmt.Sprint(lamportTime))
 
-				BroadcastMessage := &proto.PostMessage{
-					Message:   message.Message + " ----- client received at Lamport Time: ",
-					User:      message.User,
-					TimeStamp: int32(lamportTime),
-				}
-
 				//Broadcast the message to all users
 				srLock.Lock()
 				for i, user := range server.currentUsers {
 					if i != message.User.UserID {
 						//if user != nil {
 						lamportTime++
-						user.Send(BroadcastMessage)
+						user.Send(&proto.PostMessage{
+							Message:   message.Message + " ----- client received at Lamport Time: ",
+							User:      message.User,
+							TimeStamp: int32(lamportTime),
+						})
 						//}
 					}
 				}

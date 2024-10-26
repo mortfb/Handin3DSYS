@@ -208,7 +208,7 @@ func checkMessage(message string) bool {
 		lamportTime++
 		return false
 	} else if len(message) == 0 {
-		log.Printf("Message must not be empty")
+		log.Printf("Message cant be empty")
 		lamportTime++
 		return false
 	} else {

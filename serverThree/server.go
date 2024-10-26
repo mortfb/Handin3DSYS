@@ -143,7 +143,7 @@ func (server *ChittyChatServiceServer) LeaveServer(ctx context.Context, req *pro
 	lamportTime++
 
 	leaveResponse := &proto.LeaveResponse{
-		Message:   "Goodbye " + req.User.Name + ", we hope to see you again soon!",
+		Message:   "Goodbye " + req.User.Name + ", we hope to see you again soon!!",
 		TimeStamp: int32(lamportTime),
 	}
 

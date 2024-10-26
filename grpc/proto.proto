@@ -1,13 +1,18 @@
 syntax = "proto3";
 
-option go_package = "handin3/grpc/proto";
+option go_package = "Handin3DSYS/grpc/proto";
 
 service ChittyChatService {
     rpc JoinServer(JoinRequest) returns (JoinResponse){};
+<<<<<<< HEAD
     rpc Connected(stream PostMessage) returns (stream PostResponse){};
     
     //rpc PublishMessage(PostMessage) returns (PostResponse) {};
     //rpc BroadcastMessages(BroadcastRequest) returns (stream BroadcastResponse) {};
+=======
+    rpc Communicate(stream PostMessage) returns (stream PostMessage){};
+    rpc LeaveServer(LeaveRequest) returns (LeaveResponse){};
+>>>>>>> ServersideInstead
 }
 
 message PostMessage {
@@ -16,12 +21,15 @@ message PostMessage {
     int32 timeStamp = 3;
 }
 
+<<<<<<< HEAD
 message PostResponse {
     User user = 1;
     string message = 2;
     int32 timeStamp = 3;
 }
 
+=======
+>>>>>>> ServersideInstead
 message JoinRequest{
     User user = 1;
     int32 timeStamp = 2;
@@ -30,22 +38,18 @@ message JoinRequest{
 message JoinResponse{
     int32 timeStamp = 1;
     int32 userID = 2;
+    string message = 3;
 }
 
-/*
-message BroadcastRequest {
+message LeaveRequest{
     User user = 1;
     int32 timeStamp = 2;
 };
-*/
 
-
-/*
-message BroadcastResponse {
-    repeated PostMessage messages = 1; //returns a collection of PostMessage instead of individual strings and ints
-    int32 timeStamp = 2;
+message LeaveResponse{
+    int32 timeStamp = 1;
+    string message = 2;
 }
-    */
 
 message User{
     string name = 1;

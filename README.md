@@ -1,6 +1,6 @@
 # Handin3DSYS
 # How to run the program
-It is necesarry to start the server before running a client. This is done by entering the repository with the server.go - file, then use the 'go run' command
+It is necessary to start the server before running a client. This is done by entering the repository with the server.go - file, then use the 'go run' command
 
 Then you can start launching clients by using the same 'go run' command on client.go.
 

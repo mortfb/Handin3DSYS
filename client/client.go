@@ -22,10 +22,6 @@ var BroadcastStream proto.ChittyChatService_CommunicateClient
 
 var clLock sync.Mutex
 
-//NOTE: We need to use goroutines to handle the broadcasts
-//NOTE: We may need to make more rpc methods, for out clients joining and leaving (splitting the broadcast into two methods), as we did before
-//NOTE: Still missing lamportTime.
-
 func main() {
 	conn, err := grpc.NewClient("localhost:5050", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -99,6 +95,7 @@ func main() {
 			fmt.Println("Here is a list of commands")
 			fmt.Println("Type '/profile' to see your profile")
 			fmt.Println("type '/log' to see the log")
+			fmt.Println("Type '/lt' to see the current lamport time")
 			fmt.Println("Type '/quit' to quit")
 			fmt.Println("Type '/help' for list of commands")
 		}
@@ -118,6 +115,7 @@ func main() {
 			fmt.Println("Here is a list of commands")
 			fmt.Println("Type '/profile' to see your profile")
 			fmt.Println("type '/log' to see the log")
+			fmt.Println("Type '/lt' to see the current lamport time")
 			fmt.Println("Type '/quit' to quit")
 			fmt.Println("Type '/help' for list of commands")
 			continue

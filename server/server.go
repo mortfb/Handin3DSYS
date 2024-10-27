@@ -96,21 +96,6 @@ func (server *ChittyChatServiceServer) JoinServer(ctx context.Context, req *prot
 	return joinResponse, nil
 }
 
-/*
-func (server *ChittyChatServiceServer) BroadcastMessage(message *proto.PostMessage) {
-	srLock.Lock()
-	defer srLock.Unlock()
-	for i, user := range server.currentUsers {
-		if i != message.User.UserID {
-			//if user != nil {
-			lamportTime++
-			user.Send(message)
-			//}
-		}
-	}
-}
-*/
-
 func (server *ChittyChatServiceServer) LeaveServer(ctx context.Context, req *proto.LeaveRequest) (*proto.LeaveResponse, error) {
 	srLock.Lock()
 	delete(server.currentUsers, req.User.UserID)
@@ -127,14 +112,12 @@ func (server *ChittyChatServiceServer) LeaveServer(ctx context.Context, req *pro
 	srLock.Lock()
 	for i, user := range server.currentUsers {
 		if i != req.User.UserID {
-			//if user != nil {
 			lamportTime++
 			user.Send(&proto.PostMessage{
 				User:      req.User,
 				Message:   msg,
 				TimeStamp: int32(lamportTime),
 			})
-			//}
 		}
 	}
 	srLock.Unlock()
@@ -172,7 +155,7 @@ func (server *ChittyChatServiceServer) Communicate(stream proto.ChittyChatServic
 				log.Printf("User has disconnected")
 
 			} else {
-				var msg string = message.Message + " ----- server received at Lamport Time: " //+ fmt.Sprint(server.lamportTime)
+				var msg string = message.Message + " ----- server received at Lamport Time: "
 				log.Printf(msg + fmt.Sprint(lamportTime))
 
 				//Broadcast the message to all users

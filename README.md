@@ -14,6 +14,8 @@ Now the client is a part of the server. A list of commands will be provided in t
 
 /help - shows the list of the possible commands
 
+/lt - shows the current Lamport Time Stamp for the client.
+
 To use the commands just type it in the terminal and then press enter
 
 If you just want to send a message type anything you want in the terminal and press enter.

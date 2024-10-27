@@ -53,15 +53,14 @@ func (server *ChittyChatServiceServer) JoinServer(ctx context.Context, req *prot
 	req.User.UserID = tmp
 	server.totalAmountUsers++
 
+	//Add the user to the map
 	server.currentUsers[tmp] = nil
-	fmt.Print(req.User.Name + string(req.TimeStamp))
 	lamportTime = compareLamportTime(int(req.TimeStamp))
 	lamportTime++
 	srLock.Unlock()
 
 	log.Printf(req.User.Name + " joined at Lamport Time: " + fmt.Sprint(lamportTime))
 
-	//log.Printf("broadcasted join message %d", lamportTime)
 	var msg string = req.User.Name + " joined the chat at Lamport Time: "
 
 	for i, user := range server.currentUsers {
@@ -74,14 +73,11 @@ func (server *ChittyChatServiceServer) JoinServer(ctx context.Context, req *prot
 				Message:   msg,
 				TimeStamp: int32(lamportTime),
 			})
-			log.Printf("broadcasted join message at: %d to user %d", lamportTime, i)
+			log.Printf("broadcasted join message at Lamport Time: %d to user %d", lamportTime, i)
 		}
 	}
 
-	log.Printf("server LT after broadcast join %d", lamportTime)
-
 	srLock.Lock()
-	//Dont need to compare lamport time here
 	lamportTime++
 	srLock.Unlock()
 
@@ -135,10 +131,11 @@ func (server *ChittyChatServiceServer) LeaveServer(ctx context.Context, req *pro
 
 func (server *ChittyChatServiceServer) Communicate(stream proto.ChittyChatService_CommunicateServer) error {
 	srLock.Lock()
+	//Links the stream to the user
 	server.currentUsers[int32(server.totalAmountUsers-1)] = stream
 	srLock.Unlock()
 
-	//Should send the messages to the different users
+	//Sends the messages to the different users
 	for {
 		message, err := stream.Recv()
 		if message != nil {
@@ -162,14 +159,12 @@ func (server *ChittyChatServiceServer) Communicate(stream proto.ChittyChatServic
 				srLock.Lock()
 				for i, user := range server.currentUsers {
 					if i != message.User.UserID {
-						//if user != nil {
 						lamportTime++
 						user.Send(&proto.PostMessage{
 							Message:   message.Message + " ----- client received at Lamport Time: ",
 							User:      message.User,
 							TimeStamp: int32(lamportTime),
 						})
-						//}
 					}
 				}
 				srLock.Unlock()

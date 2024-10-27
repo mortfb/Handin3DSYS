@@ -36,8 +36,6 @@ func main() {
 
 	var loggedIn bool = false
 
-	//DER SKAL LAVES NOGET HVOR CLIENTEN KAN MODTAGE BROADCASTS
-
 	for {
 		if !loggedIn {
 			fmt.Println("Enter your name: ")
@@ -49,10 +47,6 @@ func main() {
 			clLock.Unlock()
 
 			fmt.Scanln(&name)
-			/*for reader.Scan() {
-				name = reader.Text()
-				break
-			}*/
 
 			thisUser = proto.User{
 				Name:   name,
@@ -177,6 +171,7 @@ func main() {
 func GetMessages() {
 	var stop bool = true
 	for stop {
+		//Recieve message from server
 		GetMessages, err := BroadcastStream.Recv()
 		clLock.Lock()
 		log.Printf("Message TimeStamp: %d", GetMessages.TimeStamp)
@@ -187,12 +182,15 @@ func GetMessages() {
 			stop = false
 			log.Fatal(err)
 		}
-		clLock.Lock()
-		lamportTime = compareLamportTime(int(GetMessages.TimeStamp))
-		lamportTime++
-		clLock.Unlock()
-		log.Printf("Client TimeStamp after recieved message: %d", lamportTime)
-		log.Printf(GetMessages.Message + fmt.Sprint(lamportTime))
+
+		if GetMessages != nil {
+			clLock.Lock()
+			lamportTime = compareLamportTime(int(GetMessages.TimeStamp))
+			lamportTime++
+			clLock.Unlock()
+			log.Printf("Client TimeStamp after recieved message: %d", lamportTime)
+			log.Printf(GetMessages.Message + fmt.Sprint(lamportTime))
+		}
 	}
 }
 

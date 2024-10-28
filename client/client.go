@@ -181,7 +181,7 @@ func GetMessages() {
 		//Recieve message from server
 		GetMessages, err := BroadcastStream.Recv()
 		clLock.Lock()
-		log.Printf("Message TimeStamp: %d", GetMessages.TimeStamp)
+		log.Printf("TimeStamp of the recieved message: %d", GetMessages.TimeStamp)
 		clLock.Unlock()
 		if err != nil {
 			log.Printf("Server has shut down: %v", err)

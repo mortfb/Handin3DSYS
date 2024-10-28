@@ -153,8 +153,8 @@ func (server *ChittyChatServiceServer) Communicate(stream proto.ChittyChatServic
 			srLock.Lock()
 			lamportTime = compareLamportTime(int(message.TimeStamp))
 			lamportTime++
-			log.Printf("Server TimeStamp: %d", lamportTime)
-			log.Printf("Message timeStamp: %d", message.TimeStamp)
+			log.Printf("TimeStamp of the recieved message: %d", message.TimeStamp)
+			log.Printf("Server TimeStamp updated to: %d", lamportTime)
 
 			srLock.Unlock()
 

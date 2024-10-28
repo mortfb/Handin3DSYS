@@ -159,7 +159,7 @@ func main() {
 				lamportTime++
 				actualMessage := thisUser.Name + ": " + input
 				log.Printf("Sending message at Lamport Time: %d", lamportTime)
-				BroadcastStream.Send(&proto.PostMessage{
+				BroadcastStream.Send(&proto.PostRequest{
 					User:      &thisUser,
 					Message:   actualMessage,
 					TimeStamp: int32(lamportTime),

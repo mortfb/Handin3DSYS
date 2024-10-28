@@ -68,7 +68,7 @@ func (server *ChittyChatServiceServer) JoinServer(ctx context.Context, req *prot
 			srLock.Lock()
 			lamportTime++
 			srLock.Unlock()
-			user.Send(&proto.PostMessage{
+			user.Send(&proto.PostResponse{
 				User:      req.User,
 				Message:   msg,
 				TimeStamp: int32(lamportTime),
@@ -109,7 +109,7 @@ func (server *ChittyChatServiceServer) LeaveServer(ctx context.Context, req *pro
 	for i, user := range server.currentUsers {
 		if i != req.User.UserID {
 			lamportTime++
-			user.Send(&proto.PostMessage{
+			user.Send(&proto.PostResponse{
 				User:      req.User,
 				Message:   msg,
 				TimeStamp: int32(lamportTime),
@@ -133,6 +133,9 @@ func (server *ChittyChatServiceServer) Communicate(stream proto.ChittyChatServic
 	srLock.Lock()
 	//Links the stream to the user
 	server.currentUsers[int32(server.totalAmountUsers-1)] = stream
+
+	lamportTime++
+	log.Printf("New user established communication")
 	srLock.Unlock()
 
 	//Sends the messages to the different users
@@ -160,7 +163,7 @@ func (server *ChittyChatServiceServer) Communicate(stream proto.ChittyChatServic
 				for i, user := range server.currentUsers {
 					if i != message.User.UserID {
 						lamportTime++
-						user.Send(&proto.PostMessage{
+						user.Send(&proto.PostResponse{
 							Message:   message.Message + " ----- client received at Lamport Time: ",
 							User:      message.User,
 							TimeStamp: int32(lamportTime),

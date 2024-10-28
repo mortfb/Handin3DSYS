@@ -134,7 +134,9 @@ func (server *ChittyChatServiceServer) Communicate(stream proto.ChittyChatServic
 	//Links the stream to the user
 	server.currentUsers[int32(server.totalAmountUsers-1)] = stream
 
-	lamportTime++
+	lamportTime = lamportTime + 3 //since we cannot send a request in the same way as the other methods,
+	//then we increment to make the servers lamportTime the same as the clients (+2) and then increment once more because a rpc call has been made(+1)
+
 	log.Printf("New user established communication")
 	srLock.Unlock()
 

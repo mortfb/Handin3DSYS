@@ -163,7 +163,7 @@ func main() {
 				continue
 			} else {
 				lamportTime++
-				actualMessage := thisUser.Name + ": " + input
+				actualMessage := thisUser.Name + " says: " + input
 				log.Printf("Sending message at Lamport Time: %d", lamportTime)
 				BroadcastStream.Send(&proto.PostRequest{
 					User:      &thisUser,
@@ -180,9 +180,6 @@ func GetMessages() {
 	for stop {
 		//Recieve message from server
 		GetMessages, err := BroadcastStream.Recv()
-		clLock.Lock()
-		log.Printf("TimeStamp of the recieved message: %d", GetMessages.TimeStamp)
-		clLock.Unlock()
 		if err != nil {
 			log.Printf("Server has shut down: %v", err)
 			lamportTime++
@@ -195,7 +192,6 @@ func GetMessages() {
 			lamportTime = compareLamportTime(int(GetMessages.TimeStamp))
 			lamportTime++
 			clLock.Unlock()
-			log.Printf("Client TimeStamp after recieved message: %d", lamportTime)
 			log.Printf(GetMessages.Message + fmt.Sprint(lamportTime))
 		}
 	}

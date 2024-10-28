@@ -87,7 +87,7 @@ func (server *ChittyChatServiceServer) JoinServer(ctx context.Context, req *prot
 		Message:   msg,
 	}
 
-	log.Printf("server LT after JoinResponse %d", lamportTime)
+	log.Printf("server Lamport Time after JoinResponse %d", lamportTime)
 
 	return joinResponse, nil
 }
@@ -114,6 +114,7 @@ func (server *ChittyChatServiceServer) LeaveServer(ctx context.Context, req *pro
 				Message:   msg,
 				TimeStamp: int32(lamportTime),
 			})
+			log.Printf("broadcasted message at Lamport Time: %d to user %d", lamportTime, i)
 		}
 	}
 	srLock.Unlock()
@@ -133,12 +134,16 @@ func (server *ChittyChatServiceServer) Communicate(stream proto.ChittyChatServic
 	srLock.Lock()
 	//Links the stream to the user
 	server.currentUsers[int32(server.totalAmountUsers-1)] = stream
+	//Takes the very first message from the user, which is the connect message and takes it out of the stream
+	connectMessage, err := stream.Recv()
+	if err != nil {
+		log.Printf("User could not connect")
+	}
+	lamportTime = compareLamportTime(int(connectMessage.TimeStamp))
+	lamportTime++
 
-	lamportTime = lamportTime + 3 //since we cannot send a request in the same way as the other methods,
-	//then we increment to make the servers lamportTime the same as the clients (+2) and then increment once more because a rpc call has been made(+1)
-
-	log.Printf("New user established communication")
 	srLock.Unlock()
+	log.Printf("New user established communication at Lamport Time: %d", lamportTime)
 
 	//Sends the messages to the different users
 	for {
@@ -170,6 +175,7 @@ func (server *ChittyChatServiceServer) Communicate(stream proto.ChittyChatServic
 							User:      message.User,
 							TimeStamp: int32(lamportTime),
 						})
+						log.Printf("broadcasted message at Lamport Time: %d to user %d", lamportTime, i)
 					}
 				}
 				srLock.Unlock()

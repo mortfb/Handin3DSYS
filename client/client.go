@@ -80,10 +80,16 @@ func main() {
 
 			clLock.Lock()
 			lamportTime++
-			clLock.Unlock()
 
 			log.Printf("Starting to communicate with server... %d", lamportTime)
 			BroadcastStream, _ = client.Communicate(context.Background())
+			BroadcastStream.Send(&proto.PostRequest{
+				User:      &thisUser,
+				Message:   "Connected to server",
+				TimeStamp: int32(lamportTime),
+			})
+
+			clLock.Unlock()
 
 			go GetMessages()
 			loggedIn = true

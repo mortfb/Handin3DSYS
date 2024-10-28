@@ -4,7 +4,7 @@ It is necessary to start the server before running a client. This is done by ent
 
 Then you can start launching clients by using the same 'go run' command on client.go.
 
-Once the client is up and running, it will ask you to write your username. The username must not contain any spaces. Type it and then press enter
+Once the client is up and running, it will ask you to write your username. Type it and then press enter
 
 Now the client is a part of the server. A list of commands will be provided in the terminal. You can now choose to write a message or use one of the following commands:
 

@@ -46,8 +46,10 @@ func main() {
 			lamportTime++
 			clLock.Unlock()
 
-			fmt.Scanln(&name)
-
+			for reader.Scan() {
+				name = reader.Text()
+				break
+			}
 			thisUser = proto.User{
 				Name:   name,
 				UserID: 1,
@@ -88,7 +90,6 @@ func main() {
 			fmt.Println("Hi", thisUser.Name, ", Type anything to write a message")
 			fmt.Println("Here is a list of commands")
 			fmt.Println("Type '/profile' to see your profile")
-			fmt.Println("type '/log' to see the log")
 			fmt.Println("Type '/lt' to see the current lamport time")
 			fmt.Println("Type '/quit' to quit")
 			fmt.Println("Type '/help' for list of commands")
